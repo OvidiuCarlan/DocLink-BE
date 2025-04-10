@@ -1,0 +1,16 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+Person(User, User, A user that has a personal account.)
+Person(Company, Company , A user that manages survey data)
+Person(Admin, Administrator, A user that manages user data and users.)
+
+System(DoctorSys, InnoVactions , The complete InnoVactions  application)
+System_Ext(api, External API, Contains information about surveys/users)
+
+Rel(User, DoctorSys, "Views account details, surveys using")
+Rel(Company, DoctorSys, "Manages surveys using")
+Rel(Admin, DoctorSys, "Views all system data and users, adds, removes, updates information using")
+Rel(DoctorSys, api, Gets information from)
+
+@enduml
