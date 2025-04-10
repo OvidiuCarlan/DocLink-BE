@@ -1,0 +1,37 @@
+@startuml
+!include <C4/C4_Container>
+
+
+System(service, Service , Service within the InnoVactions backend)
+
+System(controller1, Controller 1, [Spring Rest Controller])
+System(controller2, Controller 2, [Spring Rest Controller])
+System(controller3, Controller 3, [Spring Rest Controller])
+
+System(manager1, Manager 1, [Spring Rest Manager])
+System(manager2, Manager 2, [Spring Rest Manager])
+System(manager3, Manager 3, [Spring Rest Manager])
+
+System(repo1, Repository 1, [Spring Repository])
+System(repo2, Repository 2, [Spring Repository])
+System(repo3, Repository 3, [Spring Repository])
+
+System(db, "My Database", "[MsSQL]")
+
+Rel(service, controller1,)
+Rel(service, controller2,)
+Rel(service, controller3,)
+
+Rel(controller1, manager1,)
+Rel(controller2, manager2,)
+Rel(controller3, manager3,)
+
+Rel(manager1, repo1,)
+Rel(manager2, repo2,)
+Rel(manager3, repo3,)
+
+Rel(repo1 , db,)
+Rel(repo2 , db,)
+Rel(repo3 , db,)
+
+@enduml

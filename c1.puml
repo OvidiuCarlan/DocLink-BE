@@ -1,0 +1,14 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+Person(Doctor, User, Patient)
+System(DoctorSys, DocLink, The complete DocLink application)
+Rel(Doctor, DoctorSys, )
+
+Person(Patient, User, Doctor)
+Rel(Patient, DoctorSys, )
+
+Person(Admin, Administrator, Responsible for administration. Able to manage posts and accounts.)
+Rel(Admin, DoctorSys,)
+
+@enduml

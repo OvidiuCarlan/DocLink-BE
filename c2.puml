@@ -1,0 +1,42 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+Person(user, "User", "Patient/Doctor/Admin")
+
+System(ui, "DocLink UI", "Web app")
+Rel(user, ui, "Uses")
+
+System(api, "API Gateway", "Handles request routing, authentication, and communication between services")
+Rel(ui, api, "Sends HTTP requests (REST API)")
+
+System(login, "Login Service", "Handles user authentication and management")
+Rel(api, login, "Forwards authentication requests")
+
+System(loginDb, "User Database", "Stores user credentials and profiles", ,,,MySql)
+Rel(login, loginDb, "Reads/Writes user data (SQL queries)")
+
+System(post, "Post Service", "Manages doctor service listings")
+Rel(api, post, "Forwards post requests")
+
+System(postDb, "Post Database", "Stores doctor service listings", ,,,MongoDB)
+Rel(post, postDb, "Reads/Writes posts (SQL queries)")
+
+System(appointment, "Appointment Service", "Handles appointment scheduling")
+Rel(api, appointment, "Forwards appointment requests")
+
+System(appointmentDb, "Appointment Database", "Stores appointment bookings and schedules", ,,,MongoDB)
+Rel(appointment, appointmentDb, "Reads/Writes appointments (SQL queries)")
+
+System(review, "Review Service", "Manages patient reviews and ratings")
+Rel(api, review, "Forwards review requests")
+
+System(reviewDb, "Review Database", "Stores patient reviews and ratings", ,,,MongoDB)
+Rel(review, reviewDb, "Reads/Writes reviews (SQL queries)")
+
+System(eventBus, Message Broker, Handles communication between microservices, , , ,RabbitMQ)
+Rel(login, eventBus, "")
+Rel(post, eventBus, "")
+Rel(appointment, eventBus, "")
+Rel(review, eventBus, "")
+
+@enduml
