@@ -18,15 +18,15 @@ public class CratePostUseCaseImpl implements CreatePostUseCase {
         PostEntity savedPost = savedNewPost(request);
 
         return CreatePostResponse.builder()
-                .postId(Long.valueOf(savedPost.getId()))
+                .postId(savedPost.getId())
                 .build();
     }
 
     private PostEntity savedNewPost(CreatePostRequest request){
 
         PostEntity newPost = PostEntity.builder()
-                .userId(request.getUserId())
-                .title(request.getContent())
+                .userId(String.valueOf(request.getUserId()))
+                .title(request.getTitle())
                 .content(request.getContent())
                 .category(request.getCategory())
                 .build();

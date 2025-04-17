@@ -16,7 +16,7 @@ public class PostEntity {
     @Id
     private String id;
 
-    private Long userId;
+    private String userId;
     private String title;
     private String content;
     private String category;
