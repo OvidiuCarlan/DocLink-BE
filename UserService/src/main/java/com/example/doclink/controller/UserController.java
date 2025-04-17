@@ -23,7 +23,6 @@ public class UserController {
     private final CreateUserUseCase createUserUseCase;
 
     @Autowired
-    private AccessToken authenticatedUser;
     private final LoginUseCase loginUseCase;
 
     @PostMapping()
