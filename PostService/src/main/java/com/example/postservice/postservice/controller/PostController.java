@@ -16,7 +16,6 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/posts")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @AllArgsConstructor
 public class PostController {
     private final CreatePostUseCase createPostUseCase;

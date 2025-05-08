@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/appointments")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @AllArgsConstructor
 public class AppointmentController {
     private final CreateAppointmentUseCase createAppointmentUseCase;
