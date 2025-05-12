@@ -7,8 +7,11 @@ import com.example.doclink.business.dto.LoginResponse;
 import com.example.doclink.business.exception.InvalidCredentialsException;
 import com.example.doclink.configuration.security.token.AccessTokenEncoder;
 import com.example.doclink.configuration.security.token.impl.AccessTokenImpl;
+import com.example.doclink.persistance.RoleRepository;
 import com.example.doclink.persistance.UserRepository;
+import com.example.doclink.persistance.entity.RoleEnum;
 import com.example.doclink.persistance.entity.UserEntity;
+import com.example.doclink.persistance.entity.UserRoleEntity;
 import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,8 @@ public class LoginUseCaseImpl implements LoginUseCase {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AccessTokenEncoder accessTokenEncoder;
+    private final RoleRepository roleRepository;
+
 
     @Override
     public LoginResponse login(LoginRequest loginRequest) {
@@ -31,6 +36,14 @@ public class LoginUseCaseImpl implements LoginUseCase {
 
         if (!matchesPassword(loginRequest.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException();
+        }
+
+        if (user.getRole() == null) {
+            UserRoleEntity defaultRole = roleRepository.findByRole(RoleEnum.USER);
+            if (defaultRole != null) {
+                user.setRole(defaultRole);
+                user = userRepository.save(user);
+            }
         }
 
         String accessToken = generateAccessToken(user);

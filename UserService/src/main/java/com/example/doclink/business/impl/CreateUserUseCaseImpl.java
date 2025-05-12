@@ -31,8 +31,16 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
     }
 
     private UserEntity savedNewUser(CreateUserRequest request){
-        UserRoleEntity role = roleRepository.findByRole(RoleEnum.USER);
-        request.setRole(role);
+        UserRoleEntity role = request.getRole() != null ?
+                request.getRole() :
+                roleRepository.findByRole(RoleEnum.USER);
+
+        if (role == null) {
+            role = roleRepository.save(UserRoleEntity.builder()
+                    .role(RoleEnum.USER)
+                    .build());
+        }
+
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         UserEntity newUser = UserEntity.builder()
                 .firstName(request.getFirstName())
