@@ -1,4 +1,4 @@
-package com.example.doclink.configuration.security.auth;
+package com.docklink.apigateway.configuration.security.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

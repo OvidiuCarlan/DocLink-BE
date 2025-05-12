@@ -2,12 +2,7 @@ package com.example.doclink.configuration.security.token.impl;
 
 
 import com.example.doclink.configuration.security.token.AccessToken;
-import com.example.doclink.configuration.security.token.AccessTokenDecoder;
 import com.example.doclink.configuration.security.token.AccessTokenEncoder;
-import com.example.doclink.configuration.security.token.exception.InvalidAccessTokenException;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwt;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -20,11 +15,10 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
-public class AccessTokenEncoderDecoderImpl implements AccessTokenEncoder, AccessTokenDecoder {
+public class AccessTokenEncoderDecoderImpl implements AccessTokenEncoder {
     private final Key key;
 
     public AccessTokenEncoderDecoderImpl(@Value("${jwt.secret}") String secretKey) {
@@ -50,21 +44,5 @@ public class AccessTokenEncoderDecoderImpl implements AccessTokenEncoder, Access
                 .addClaims(claimsMap)
                 .signWith(key)
                 .compact();
-    }
-
-    @Override
-    public AccessToken decode(String accessTokenEncoded) {
-        try {
-            Jwt<?, Claims> jwt = Jwts.parserBuilder().setSigningKey(key).build()
-                    .parseClaimsJws(accessTokenEncoded);
-            Claims claims = jwt.getBody();
-
-            List<String> roles = claims.get("roles", List.class);
-            Long userId = claims.get("userId", Long.class);
-
-            return new AccessTokenImpl(claims.getSubject(), userId, roles);
-        } catch (JwtException e) {
-            throw new InvalidAccessTokenException(e.getMessage());
-        }
     }
 }

@@ -16,7 +16,6 @@ import com.example.doclink.business.cases.LoginUseCase;
 
 @RestController
 @RequestMapping("/users")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true" )
 @AllArgsConstructor
 public class UserController {
 

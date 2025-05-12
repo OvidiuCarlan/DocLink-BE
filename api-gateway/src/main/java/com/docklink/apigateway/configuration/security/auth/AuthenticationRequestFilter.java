@@ -1,9 +1,9 @@
-package com.example.doclink.configuration.security.auth;
+package com.docklink.apigateway.configuration.security.auth;
 
 
-import com.example.doclink.configuration.security.token.AccessToken;
-import com.example.doclink.configuration.security.token.AccessTokenDecoder;
-import com.example.doclink.configuration.security.token.exception.InvalidAccessTokenException;
+import com.docklink.apigateway.configuration.security.token.AccessToken;
+import com.docklink.apigateway.configuration.security.token.AccessTokenDecoder;
+import com.docklink.apigateway.configuration.security.token.exception.InvalidAccessTokenException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

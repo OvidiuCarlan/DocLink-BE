@@ -1,4 +1,4 @@
-package com.example.doclink.configuration.security.token.exception;
+package com.docklink.apigateway.configuration.security.token.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
