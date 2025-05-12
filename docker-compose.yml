@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # MongoDB configuration
   mongodb:
     image: mongo
     container_name: mongodb
@@ -8,6 +9,108 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - doclink-network
+
+  # Add MySQL for the UserService
+  mysql:
+    image: mysql:8.0
+    container_name: doclink-mysql
+    environment:
+      MYSQL_DATABASE: dbi481968
+      MYSQL_USER: dbi481968
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - doclink-network
+
+  # Backend services
+  user-service:
+    build:
+      context: ./UserService
+      dockerfile: Dockerfile
+    container_name: doclink-user-service
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/dbi481968
+      SPRING_DATASOURCE_USERNAME: dbi481968
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_JPA_PROPERTIES_HIBERNATE_GLOBALLY_QUOTED_IDENTIFIERS: "true"
+      SPRING_JPA_HIBERNATE_NAMING_PHYSICAL-STRATEGY: "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl"
+    depends_on:
+      - mysql
+    networks:
+      - doclink-network
+
+  post-service:
+    build:
+      context: ./PostService
+      dockerfile: Dockerfile
+    container_name: doclink-post-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/postservice
+    depends_on:
+      - mongodb
+    networks:
+      - doclink-network
+
+  appointment-service:
+    build:
+      context: ./AppointmentService
+      dockerfile: Dockerfile
+    container_name: doclink-appointment-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/appointment-db
+    depends_on:
+      - mongodb
+    networks:
+      - doclink-network
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: doclink-api-gateway
+    ports:
+      - "9000:9000"
+    environment:
+      USER_SERVICE_URL: http://user-service:8080
+      POST_SERVICE_URL: http://post-service:8081
+      APPOINTMENT_SERVICE_URL: http://appointment-service:8082
+    depends_on:
+      - user-service
+      - post-service
+      - appointment-service
+    networks:
+      - doclink-network
+
+  # Frontend
+  frontend:
+    image: nginx:alpine
+    container_name: doclink-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ../../Fronted/DocLink-FE/dist/browser:/usr/share/nginx/html
+    depends_on:
+      - api-gateway
+    networks:
+      - doclink-network
+
+networks:
+  doclink-network:
+    driver: bridge
 
 volumes:
   mongodb_data:
+  mysql_data:
