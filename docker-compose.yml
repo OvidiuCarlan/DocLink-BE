@@ -12,7 +12,6 @@ services:
     networks:
       - doclink-network
 
-  # Add MySQL for the UserService
   mysql:
     image: mysql:8.0
     container_name: doclink-mysql

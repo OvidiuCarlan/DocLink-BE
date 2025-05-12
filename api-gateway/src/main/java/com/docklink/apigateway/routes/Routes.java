@@ -41,45 +41,24 @@ public class Routes {
     @Bean
     public RouterFunction<ServerResponse> userServiceRoute(){
         return GatewayRouterFunctions.route("user_service")
-                // Support both with and without /api prefix
-                .route(RequestPredicates.path("/api/users/**"),
-                        request -> {
-                            // Strip the /api prefix before forwarding
-                            String path = request.path().substring(4); // Remove "/api"
-                            return HandlerFunctions.http("http://localhost:8080" + path).handle(request);
-                        })
                 .route(RequestPredicates.path("/users/**"),
-                        HandlerFunctions.http("http://localhost:8080"))
+                        HandlerFunctions.http("http://user-service:8080"))
                 .build();
     }
 
     @Bean
     public RouterFunction<ServerResponse> postServiceRoute(){
         return GatewayRouterFunctions.route("post_service")
-                // Support both with and without /api prefix
-                .route(RequestPredicates.path("/api/posts/**"),
-                        request -> {
-                            // Strip the /api prefix before forwarding
-                            String path = request.path().substring(4); // Remove "/api"
-                            return HandlerFunctions.http("http://localhost:8081" + path).handle(request);
-                        })
                 .route(RequestPredicates.path("/posts/**"),
-                        HandlerFunctions.http("http://localhost:8081"))
+                        HandlerFunctions.http("http://post-service:8081"))
                 .build();
     }
 
     @Bean
     public RouterFunction<ServerResponse> appointmentServiceRoute(){
         return GatewayRouterFunctions.route("appointment_service")
-                // Support both with and without /api prefix
-                .route(RequestPredicates.path("/api/appointments/**"),
-                        request -> {
-                            // Strip the /api prefix before forwarding
-                            String path = request.path().substring(4); // Remove "/api"
-                            return HandlerFunctions.http("http://localhost:8082" + path).handle(request);
-                        })
                 .route(RequestPredicates.path("/appointments/**"),
-                        HandlerFunctions.http("http://localhost:8082"))
+                        HandlerFunctions.http("http://appointment-service:8082"))
                 .build();
     }
 }
