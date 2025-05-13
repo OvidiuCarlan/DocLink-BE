@@ -1,4 +1,4 @@
-name: DocLink Simplified CI Pipeline
+name: DocLink CI/CD Pipeline
 
 on:
   push:
@@ -7,39 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  # Basic debug job to examine repository structure
-  debug-repository:
+  # Build and test each service individually
+  build-service:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    strategy:
+      matrix:
+        service: [UserService, PostService, AppointmentService, api-gateway]
+      fail-fast: false
 
-      - name: List repository contents
-        run: |
-          echo "Repository root contents:"
-          ls -la
-          
-          echo "UserService contents:"
-          ls -la UserService || echo "UserService directory not found"
-          
-          echo "Check for Gradle wrapper in UserService:"
-          if [ -f "UserService/gradlew" ]; then
-            echo "Gradle wrapper exists"
-          else
-            echo "Gradle wrapper does not exist"
-          fi
-          
-          echo "Check for build.gradle in UserService:"
-          if [ -f "UserService/build.gradle" ]; then
-            echo "build.gradle exists"
-          else
-            echo "build.gradle does not exist"
-          fi
-
-  # Simplified build job for just one service
-  build-user-service:
-    needs: debug-repository
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -49,23 +24,99 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
 
-      - name: Check Docker
+      - name: Check service directory
         run: |
-          docker version
-          docker info
+          echo "Checking ${{ matrix.service }} directory:"
+          ls -la ${{ matrix.service }} || echo "Directory not found"
 
-      # Try building without Docker
-      - name: Build with Gradle (if wrapper exists)
+      # Build with Gradle
+      - name: Build service
         run: |
-          if [ -f "UserService/gradlew" ]; then
-            cd UserService
+          if [ -f "${{ matrix.service }}/gradlew" ]; then
+            cd ${{ matrix.service }}
             chmod +x ./gradlew
             ./gradlew clean build --info --stacktrace || echo "Gradle build failed"
           else
-            echo "Gradle wrapper not found - installing Gradle"
+            echo "Gradle wrapper not found - using system Gradle"
             sudo apt-get update
             sudo apt-get install -y gradle
-            cd UserService
+            cd ${{ matrix.service }}
             gradle clean build --info --stacktrace || echo "Gradle build failed"
           fi
+
+      # Build Docker image - simplified approach without saving as artifact
+      - name: Build Docker image
+        run: |
+          cd ${{ matrix.service }}
+          if [ -f "Dockerfile" ]; then
+            docker build -t doclink-${{ matrix.service }}:latest .
+            echo "Docker image built successfully"
+          else
+            echo "Creating simple Dockerfile"
+            echo "FROM openjdk:17-slim" > Dockerfile
+            echo "WORKDIR /app" >> Dockerfile
+            echo "COPY build/libs/*.jar app.jar" >> Dockerfile
+            echo "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]" >> Dockerfile
+            docker build -t doclink-${{ matrix.service }}:latest .
+            echo "Docker image built with generated Dockerfile"
+          fi
+
+  # Only run deployment on main branch
+  deploy:
+    needs: [build-service]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker
+        run: |
+          docker --version
+          docker info
+
+      - name: Set up Docker network
+        run: |
+          docker network create doclink-network || true
+
+      # Deploy MySQL
+      - name: Deploy MySQL
+        run: |
+          docker stop doclink-mysql || true
+          docker rm doclink-mysql || true
+          docker run -d \
+            -e MYSQL_DATABASE=dbi481968 \
+            -e MYSQL_USER=dbi481968 \
+            -e MYSQL_PASSWORD=password \
+            -e MYSQL_ROOT_PASSWORD=root_password \
+            -p 3306:3306 \
+            --network doclink-network \
+            --name doclink-mysql \
+            mysql:8.0
+
+      # Deploy MongoDB
+      - name: Deploy MongoDB
+        run: |
+          docker stop mongodb || true
+          docker rm mongodb || true
+          docker run -d \
+            -p 27017:27017 \
+            --network doclink-network \
+            --name mongodb \
+            mongo:latest
+
+      - name: Wait for databases
+        run: sleep 20
+
+      # For now, just show a successful deployment message
+      - name: Deployment placeholder
+        run: |
+          echo "Deployment would happen here if we had artifact sharing"
+          echo "In a real production environment, we would:"
+          echo "1. Push Docker images to a registry"
+          echo "2. Pull those images on the deployment server"
+          echo "3. Deploy services with proper configuration"
+          echo "Deployment simulation complete"
