@@ -1,4 +1,4 @@
-name: DocLink Backend CI/CD Pipeline
+name: DocLink Simplified CI Pipeline
 
 on:
   push:
@@ -7,15 +7,39 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build jobs for each service with improved error handling
-  build-backend-services:
+  # Basic debug job to examine repository structure
+  debug-repository:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [UserService, PostService, AppointmentService, api-gateway]
-      # Prevent all builds from failing if one fails
-      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
+      - name: List repository contents
+        run: |
+          echo "Repository root contents:"
+          ls -la
+          
+          echo "UserService contents:"
+          ls -la UserService || echo "UserService directory not found"
+          
+          echo "Check for Gradle wrapper in UserService:"
+          if [ -f "UserService/gradlew" ]; then
+            echo "Gradle wrapper exists"
+          else
+            echo "Gradle wrapper does not exist"
+          fi
+          
+          echo "Check for build.gradle in UserService:"
+          if [ -f "UserService/build.gradle" ]; then
+            echo "build.gradle exists"
+          else
+            echo "build.gradle does not exist"
+          fi
+
+  # Simplified build job for just one service
+  build-user-service:
+    needs: debug-repository
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -25,217 +49,23 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
-      # List directory contents for debugging
-      - name: List service directory
+      - name: Check Docker
         run: |
-          echo "Contents of ${{ matrix.service }} directory:"
-          ls -la ${{ matrix.service }}
+          docker version
+          docker info
 
-      # Check if the Gradle wrapper exists before trying to use it
-      - name: Check Gradle wrapper
+      # Try building without Docker
+      - name: Build with Gradle (if wrapper exists)
         run: |
-          if [ -f "${{ matrix.service }}/gradlew" ]; then
-            echo "Gradle wrapper exists"
+          if [ -f "UserService/gradlew" ]; then
+            cd UserService
+            chmod +x ./gradlew
+            ./gradlew clean build --info --stacktrace || echo "Gradle build failed"
           else
-            echo "ERROR: Gradle wrapper does not exist in ${{ matrix.service }} directory"
-            echo "Creating Gradle wrapper"
-            cd ${{ matrix.service }}
-            gradle wrapper || echo "Failed to create Gradle wrapper"
+            echo "Gradle wrapper not found - installing Gradle"
+            sudo apt-get update
+            sudo apt-get install -y gradle
+            cd UserService
+            gradle clean build --info --stacktrace || echo "Gradle build failed"
           fi
-
-      - name: Grant execute permissions to Gradle
-        run: chmod +x ${{ matrix.service }}/gradlew
-
-      # Add verbose logging for Gradle
-      - name: Build with Gradle
-        run: |
-          cd ${{ matrix.service }}
-          ./gradlew clean assemble --info --stacktrace || exit 1
-
-      # Check if Dockerfile exists before building
-      - name: Check Dockerfile
-        run: |
-          if [ -f "${{ matrix.service }}/Dockerfile" ]; then
-            echo "Dockerfile exists"
-          else
-            echo "ERROR: Dockerfile does not exist in ${{ matrix.service }} directory"
-            echo "Creating a simple Dockerfile"
-            echo "FROM openjdk:17-slim" > ${{ matrix.service }}/Dockerfile
-            echo "WORKDIR /app" >> ${{ matrix.service }}/Dockerfile
-            echo "COPY build/libs/*.jar app.jar" >> ${{ matrix.service }}/Dockerfile
-            echo "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]" >> ${{ matrix.service }}/Dockerfile
-          fi
-
-      # Add error handling for Docker build
-      - name: Build Docker image
-        run: |
-          cd ${{ matrix.service }}
-          docker build -t doclink-${{ matrix.service }}:latest . || exit 1
-
-      - name: Save Docker image
-        run: |
-          docker save doclink-${{ matrix.service }}:latest -o doclink-${{ matrix.service }}.tar
-
-      - name: Upload Docker image as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: doclink-${{ matrix.service }}-image
-          path: doclink-${{ matrix.service }}.tar
-          retention-days: 1
-
-  # Test jobs for each service
-  test-backend-services:
-    needs: [build-backend-services]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [UserService, PostService, AppointmentService, api-gateway]
-      fail-fast: false
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
-
-      # Check if the Gradle wrapper exists
-      - name: Check Gradle wrapper
-        run: |
-          if [ -f "${{ matrix.service }}/gradlew" ]; then
-            echo "Gradle wrapper exists"
-          else
-            echo "ERROR: Gradle wrapper does not exist in ${{ matrix.service }} directory"
-            exit 1
-          fi
-
-      - name: Grant execute permissions to Gradle
-        run: chmod +x ${{ matrix.service }}/gradlew
-
-      - name: Run tests
-        run: |
-          cd ${{ matrix.service }}
-          ./gradlew test --info --stacktrace
-
-  # Deployment job
-  deploy:
-    needs: [test-backend-services]
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Download all Docker images
-        uses: actions/download-artifact@v3
-        with:
-          path: ./docker-images
-
-      # List downloaded artifacts for debugging
-      - name: List artifacts
-        run: |
-          echo "Downloaded artifacts:"
-          ls -la ./docker-images
-
-      - name: Load Docker images
-        run: |
-          for image in ./docker-images/*/*.tar; do
-            echo "Loading $image"
-            docker load -i "$image"
-          done
-
-      - name: Set up Docker network
-        run: |
-          docker network create doclink-network || true
-
-      # MySQL Database Deployment
-      - name: Deploy MySQL
-        run: |
-          docker stop doclink-mysql || true
-          docker rm doclink-mysql || true
-          docker run -d \
-            -e MYSQL_DATABASE=dbi481968 \
-            -e MYSQL_USER=dbi481968 \
-            -e MYSQL_PASSWORD=password \
-            -e MYSQL_ROOT_PASSWORD=root_password \
-            -p 3306:3306 \
-            --network doclink-network \
-            --name doclink-mysql \
-            mysql:8.0
-
-      # MongoDB Database Deployment
-      - name: Deploy MongoDB
-        run: |
-          docker stop mongodb || true
-          docker rm mongodb || true
-          docker run -d \
-            -p 27017:27017 \
-            --network doclink-network \
-            --name mongodb \
-            mongo:latest
-
-      # Wait for databases to be ready
-      - name: Wait for databases to be ready
-        run: sleep 30
-
-      # Deploy Backend Services
-      - name: Deploy User Service
-        run: |
-          docker stop doclink-user-service || true
-          docker rm doclink-user-service || true
-          docker run -d \
-            -e SPRING_DATASOURCE_URL=jdbc:mysql://doclink-mysql:3306/dbi481968 \
-            -e SPRING_DATASOURCE_USERNAME=dbi481968 \
-            -e SPRING_DATASOURCE_PASSWORD=password \
-            -p 8080:8080 \
-            --network doclink-network \
-            --name doclink-user-service \
-            doclink-UserService:latest
-
-      - name: Deploy Post Service
-        run: |
-          docker stop doclink-post-service || true
-          docker rm doclink-post-service || true
-          docker run -d \
-            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/postservice \
-            -p 8081:8081 \
-            --network doclink-network \
-            --name doclink-post-service \
-            doclink-PostService:latest
-
-      - name: Deploy Appointment Service
-        run: |
-          docker stop doclink-appointment-service || true
-          docker rm doclink-appointment-service || true
-          docker run -d \
-            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/appointment-db \
-            -p 8082:8082 \
-            --network doclink-network \
-            --name doclink-appointment-service \
-            doclink-AppointmentService:latest
-
-      - name: Deploy API Gateway
-        run: |
-          docker stop doclink-api-gateway || true
-          docker rm doclink-api-gateway || true
-          docker run -d \
-            -e USER_SERVICE_URL=http://doclink-user-service:8080 \
-            -e POST_SERVICE_URL=http://doclink-post-service:8081 \
-            -e APPOINTMENT_SERVICE_URL=http://doclink-appointment-service:8082 \
-            -p 9000:9000 \
-            --network doclink-network \
-            --name doclink-api-gateway \
-            doclink-api-gateway:latest
-
-      # Verify deployments
-      - name: Verify deployments
-        run: |
-          docker ps -a
-          echo "Deployment completed successfully!"
