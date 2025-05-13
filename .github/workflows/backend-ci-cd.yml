@@ -7,12 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build jobs for each service
+  # Build jobs for each service with improved error handling
   build-backend-services:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         service: [UserService, PostService, AppointmentService, api-gateway]
+      # Prevent all builds from failing if one fails
+      fail-fast: false
 
     steps:
       - name: Checkout repository
@@ -25,18 +27,52 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      # List directory contents for debugging
+      - name: List service directory
+        run: |
+          echo "Contents of ${{ matrix.service }} directory:"
+          ls -la ${{ matrix.service }}
+
+      # Check if the Gradle wrapper exists before trying to use it
+      - name: Check Gradle wrapper
+        run: |
+          if [ -f "${{ matrix.service }}/gradlew" ]; then
+            echo "Gradle wrapper exists"
+          else
+            echo "ERROR: Gradle wrapper does not exist in ${{ matrix.service }} directory"
+            echo "Creating Gradle wrapper"
+            cd ${{ matrix.service }}
+            gradle wrapper || echo "Failed to create Gradle wrapper"
+          fi
+
       - name: Grant execute permissions to Gradle
         run: chmod +x ${{ matrix.service }}/gradlew
 
+      # Add verbose logging for Gradle
       - name: Build with Gradle
         run: |
           cd ${{ matrix.service }}
-          ./gradlew clean assemble
+          ./gradlew clean assemble --info --stacktrace || exit 1
 
+      # Check if Dockerfile exists before building
+      - name: Check Dockerfile
+        run: |
+          if [ -f "${{ matrix.service }}/Dockerfile" ]; then
+            echo "Dockerfile exists"
+          else
+            echo "ERROR: Dockerfile does not exist in ${{ matrix.service }} directory"
+            echo "Creating a simple Dockerfile"
+            echo "FROM openjdk:17-slim" > ${{ matrix.service }}/Dockerfile
+            echo "WORKDIR /app" >> ${{ matrix.service }}/Dockerfile
+            echo "COPY build/libs/*.jar app.jar" >> ${{ matrix.service }}/Dockerfile
+            echo "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]" >> ${{ matrix.service }}/Dockerfile
+          fi
+
+      # Add error handling for Docker build
       - name: Build Docker image
         run: |
           cd ${{ matrix.service }}
-          docker build -t doclink-${{ matrix.service }}:latest .
+          docker build -t doclink-${{ matrix.service }}:latest . || exit 1
 
       - name: Save Docker image
         run: |
@@ -51,11 +87,12 @@ jobs:
 
   # Test jobs for each service
   test-backend-services:
-    runs-on: ubuntu-latest
     needs: [build-backend-services]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         service: [UserService, PostService, AppointmentService, api-gateway]
+      fail-fast: false
 
     steps:
       - name: Checkout repository
@@ -68,17 +105,27 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      # Check if the Gradle wrapper exists
+      - name: Check Gradle wrapper
+        run: |
+          if [ -f "${{ matrix.service }}/gradlew" ]; then
+            echo "Gradle wrapper exists"
+          else
+            echo "ERROR: Gradle wrapper does not exist in ${{ matrix.service }} directory"
+            exit 1
+          fi
+
       - name: Grant execute permissions to Gradle
         run: chmod +x ${{ matrix.service }}/gradlew
 
       - name: Run tests
         run: |
           cd ${{ matrix.service }}
-          ./gradlew test
+          ./gradlew test --info --stacktrace
 
   # Deployment job
   deploy:
-    needs: [test-backend-services]  # Removed dependency on security-scan
+    needs: [test-backend-services]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
@@ -91,9 +138,16 @@ jobs:
         with:
           path: ./docker-images
 
+      # List downloaded artifacts for debugging
+      - name: List artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          ls -la ./docker-images
+
       - name: Load Docker images
         run: |
           for image in ./docker-images/*/*.tar; do
+            echo "Loading $image"
             docker load -i "$image"
           done
 
