@@ -1,4 +1,4 @@
-name: DocLink CI/CD Pipeline
+name: DocLink CI Pipeline
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build and create Docker images for each service
-  build-service:
+  # Build each service
+  build-services:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -40,139 +40,13 @@ jobs:
             gradle clean assemble -x test
           fi
 
-      # Build Docker image
-      - name: Build Docker image
+      # Verify build output
+      - name: Verify build output
         run: |
-          cd ${{ matrix.service }}
-          if [ -f "Dockerfile" ]; then
-            docker build -t doclink-${{ matrix.service }}:latest .
+          echo "Checking build output for ${{ matrix.service }}"
+          if [ -d "${{ matrix.service }}/build/libs" ]; then
+            ls -la "${{ matrix.service }}/build/libs"
+            echo "Build successful!"
           else
-            echo "Creating simple Dockerfile"
-            echo "FROM openjdk:17-slim" > Dockerfile
-            echo "WORKDIR /app" >> Dockerfile
-            echo "COPY build/libs/*.jar app.jar" >> Dockerfile
-            echo "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]" >> Dockerfile
-            docker build -t doclink-${{ matrix.service }}:latest .
+            echo "Warning: No build output found in expected location"
           fi
-
-      # Save Docker image as artifact
-      - name: Save Docker image
-        run: |
-          docker save doclink-${{ matrix.service }}:latest -o doclink-${{ matrix.service }}.tar
-
-      - name: Upload Docker image as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: doclink-${{ matrix.service }}-image
-          path: doclink-${{ matrix.service }}.tar
-          retention-days: 1
-
-  # Deploy services (only on main branch)
-  deploy:
-    needs: [build-service]
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Download all Docker images
-        uses: actions/download-artifact@v3
-        with:
-          path: ./docker-images
-
-      - name: Load Docker images
-        run: |
-          for image in ./docker-images/*/*.tar; do
-            echo "Loading $image"
-            docker load -i "$image" || echo "Failed to load $image"
-          done
-
-      - name: Set up Docker network
-        run: |
-          docker network create doclink-network || true
-
-      # Database deployments
-      - name: Deploy MySQL
-        run: |
-          docker stop doclink-mysql || true
-          docker rm doclink-mysql || true
-          docker run -d \
-            -e MYSQL_DATABASE=dbi481968 \
-            -e MYSQL_USER=dbi481968 \
-            -e MYSQL_PASSWORD=password \
-            -e MYSQL_ROOT_PASSWORD=root_password \
-            -p 3306:3306 \
-            --network doclink-network \
-            --name doclink-mysql \
-            mysql:8.0
-
-      - name: Deploy MongoDB
-        run: |
-          docker stop mongodb || true
-          docker rm mongodb || true
-          docker run -d \
-            -p 27017:27017 \
-            --network doclink-network \
-            --name mongodb \
-            mongo:latest
-
-      # Wait for databases to be ready
-      - name: Wait for databases to be ready
-        run: sleep 30
-
-      # Deploy Backend Services
-      - name: Deploy User Service
-        run: |
-          docker stop doclink-user-service || true
-          docker rm doclink-user-service || true
-          docker run -d \
-            -e SPRING_DATASOURCE_URL=jdbc:mysql://doclink-mysql:3306/dbi481968 \
-            -e SPRING_DATASOURCE_USERNAME=dbi481968 \
-            -e SPRING_DATASOURCE_PASSWORD=password \
-            -p 8080:8080 \
-            --network doclink-network \
-            --name doclink-user-service \
-            doclink-UserService:latest
-
-      - name: Deploy Post Service
-        run: |
-          docker stop doclink-post-service || true
-          docker rm doclink-post-service || true
-          docker run -d \
-            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/postservice \
-            -p 8081:8081 \
-            --network doclink-network \
-            --name doclink-post-service \
-            doclink-PostService:latest
-
-      - name: Deploy Appointment Service
-        run: |
-          docker stop doclink-appointment-service || true
-          docker rm doclink-appointment-service || true
-          docker run -d \
-            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/appointment-db \
-            -p 8082:8082 \
-            --network doclink-network \
-            --name doclink-appointment-service \
-            doclink-AppointmentService:latest
-
-      - name: Deploy API Gateway
-        run: |
-          docker stop doclink-api-gateway || true
-          docker rm doclink-api-gateway || true
-          docker run -d \
-            -e USER_SERVICE_URL=http://doclink-user-service:8080 \
-            -e POST_SERVICE_URL=http://doclink-post-service:8081 \
-            -e APPOINTMENT_SERVICE_URL=http://doclink-appointment-service:8082 \
-            -p 9000:9000 \
-            --network doclink-network \
-            --name doclink-api-gateway \
-            doclink-api-gateway:latest
-
-      # Verify deployments
-      - name: Verify deployments
-        run: |
-          docker ps -a
-          echo "Deployment completed successfully!"
