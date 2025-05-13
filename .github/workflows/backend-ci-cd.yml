@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# Add this permissions block to ensure proper access to GHCR
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   # Build and create Docker images for each service
   build-and-push:
@@ -13,6 +18,15 @@ jobs:
     strategy:
       matrix:
         service: [UserService, PostService, AppointmentService, api-gateway]
+        include:
+          - service: UserService
+            lowercase: userservice
+          - service: PostService
+            lowercase: postservice
+          - service: AppointmentService
+            lowercase: appointmentservice
+          - service: api-gateway
+            lowercase: api-gateway
       fail-fast: false
 
     steps:
@@ -58,15 +72,34 @@ jobs:
         run: |
           echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      # Build and push Docker image (with push only on main branch)
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./${{ matrix.service }}
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.service }}:latest
-            ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.service }}:${{ github.sha }}
+      # Build Docker image locally first
+      - name: Build Docker image
+        run: |
+          cd ${{ matrix.service }}
+          if [ -f "Dockerfile" ]; then
+            echo "Using existing Dockerfile"
+          else
+            echo "Creating simple Dockerfile"
+            echo "FROM openjdk:17-slim" > Dockerfile
+            echo "WORKDIR /app" >> Dockerfile
+            echo "COPY build/libs/*.jar app.jar" >> Dockerfile
+            echo "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]" >> Dockerfile
+          fi
+          
+          # Build the image locally with lowercase name
+          docker build -t doclink-${{ matrix.lowercase }}:latest .
+
+      # Push Docker image (only on main branch)
+      - name: Push Docker image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Tag with GHCR and push
+          docker tag doclink-${{ matrix.lowercase }}:latest ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:latest
+          docker tag doclink-${{ matrix.lowercase }}:latest ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:${{ github.sha }}
+          
+          # Push to GitHub Container Registry
+          docker push ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:latest
+          docker push ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:${{ github.sha }}
 
   # Deploy services (only on main branch)
   deploy:
@@ -123,7 +156,7 @@ jobs:
           SHA="${{ github.sha }}"
           
           # Pull and run User Service
-          docker pull ghcr.io/$OWNER/doclink-UserService:$SHA
+          docker pull ghcr.io/$OWNER/doclink-userservice:$SHA
           docker stop doclink-user-service || true
           docker rm doclink-user-service || true
           docker run -d \
@@ -133,10 +166,10 @@ jobs:
             -p 8080:8080 \
             --network doclink-network \
             --name doclink-user-service \
-            ghcr.io/$OWNER/doclink-UserService:$SHA
+            ghcr.io/$OWNER/doclink-userservice:$SHA
           
           # Pull and run Post Service
-          docker pull ghcr.io/$OWNER/doclink-PostService:$SHA
+          docker pull ghcr.io/$OWNER/doclink-postservice:$SHA
           docker stop doclink-post-service || true
           docker rm doclink-post-service || true
           docker run -d \
@@ -144,10 +177,10 @@ jobs:
             -p 8081:8081 \
             --network doclink-network \
             --name doclink-post-service \
-            ghcr.io/$OWNER/doclink-PostService:$SHA
+            ghcr.io/$OWNER/doclink-postservice:$SHA
           
           # Pull and run Appointment Service
-          docker pull ghcr.io/$OWNER/doclink-AppointmentService:$SHA
+          docker pull ghcr.io/$OWNER/doclink-appointmentservice:$SHA
           docker stop doclink-appointment-service || true
           docker rm doclink-appointment-service || true
           docker run -d \
@@ -155,7 +188,7 @@ jobs:
             -p 8082:8082 \
             --network doclink-network \
             --name doclink-appointment-service \
-            ghcr.io/$OWNER/doclink-AppointmentService:$SHA
+            ghcr.io/$OWNER/doclink-appointmentservice:$SHA
           
           # Pull and run API Gateway
           docker pull ghcr.io/$OWNER/doclink-api-gateway:$SHA
