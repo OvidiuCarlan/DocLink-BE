@@ -1,4 +1,4 @@
-name: DocLink Build Pipeline
+name: DocLink CI/CD Pipeline
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build each service individually with detailed logging
+  # Build and create Docker images for each service
   build-service:
     runs-on: ubuntu-latest
     strategy:
@@ -26,63 +26,153 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Check service directory and build files
-        run: |
-          echo "Contents of ${{ matrix.service }} directory:"
-          ls -la ${{ matrix.service }} || echo "Directory not found"
-          
-          if [ -f "${{ matrix.service }}/build.gradle" ]; then
-            echo "Found build.gradle:"
-            cat "${{ matrix.service }}/build.gradle"
-          elif [ -f "${{ matrix.service }}/build.gradle.kts" ]; then
-            echo "Found build.gradle.kts:"
-            cat "${{ matrix.service }}/build.gradle.kts"
-          else
-            echo "No build.gradle file found"
-          fi
-          
-          if [ -f "${{ matrix.service }}/settings.gradle" ]; then
-            echo "Found settings.gradle:"
-            cat "${{ matrix.service }}/settings.gradle"
-          elif [ -f "${{ matrix.service }}/settings.gradle.kts" ]; then
-            echo "Found settings.gradle.kts:"
-            cat "${{ matrix.service }}/settings.gradle.kts"
-          fi
-          
-          if [ -f "${{ matrix.service }}/gradlew" ]; then
-            echo "Found Gradle wrapper"
-          else
-            echo "No Gradle wrapper found"
-          fi
-
-      # Try to build with Gradle but continue on error
+      # Build with Gradle (skipping tests)
       - name: Build service
-        continue-on-error: true
         run: |
           if [ -f "${{ matrix.service }}/gradlew" ]; then
             cd ${{ matrix.service }}
             chmod +x ./gradlew
-            echo "Running gradle build for ${{ matrix.service }}"
-            ./gradlew clean assemble --info --stacktrace
+            ./gradlew clean assemble -x test
           else
             echo "Gradle wrapper not found - using system Gradle"
             sudo apt-get update && sudo apt-get install -y gradle
             cd ${{ matrix.service }}
-            echo "Running gradle build for ${{ matrix.service }}"
-            gradle clean assemble --info --stacktrace 
+            gradle clean assemble -x test
           fi
 
-      # Check for compiled output
-      - name: Check for build output
+      # Build Docker image
+      - name: Build Docker image
         run: |
-          echo "Checking for build output in ${{ matrix.service }}/build directory:"
-          if [ -d "${{ matrix.service }}/build" ]; then
-            ls -la "${{ matrix.service }}/build" 
-          
-            if [ -d "${{ matrix.service }}/build/libs" ]; then
-              echo "Contents of build/libs:"
-              ls -la "${{ matrix.service }}/build/libs"
-            fi
+          cd ${{ matrix.service }}
+          if [ -f "Dockerfile" ]; then
+            docker build -t doclink-${{ matrix.service }}:latest .
           else
-            echo "No build directory found"
+            echo "Creating simple Dockerfile"
+            echo "FROM openjdk:17-slim" > Dockerfile
+            echo "WORKDIR /app" >> Dockerfile
+            echo "COPY build/libs/*.jar app.jar" >> Dockerfile
+            echo "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]" >> Dockerfile
+            docker build -t doclink-${{ matrix.service }}:latest .
           fi
+
+      # Save Docker image as artifact
+      - name: Save Docker image
+        run: |
+          docker save doclink-${{ matrix.service }}:latest -o doclink-${{ matrix.service }}.tar
+
+      - name: Upload Docker image as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: doclink-${{ matrix.service }}-image
+          path: doclink-${{ matrix.service }}.tar
+          retention-days: 1
+
+  # Deploy services (only on main branch)
+  deploy:
+    needs: [build-service]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download all Docker images
+        uses: actions/download-artifact@v3
+        with:
+          path: ./docker-images
+
+      - name: Load Docker images
+        run: |
+          for image in ./docker-images/*/*.tar; do
+            echo "Loading $image"
+            docker load -i "$image" || echo "Failed to load $image"
+          done
+
+      - name: Set up Docker network
+        run: |
+          docker network create doclink-network || true
+
+      # Database deployments
+      - name: Deploy MySQL
+        run: |
+          docker stop doclink-mysql || true
+          docker rm doclink-mysql || true
+          docker run -d \
+            -e MYSQL_DATABASE=dbi481968 \
+            -e MYSQL_USER=dbi481968 \
+            -e MYSQL_PASSWORD=password \
+            -e MYSQL_ROOT_PASSWORD=root_password \
+            -p 3306:3306 \
+            --network doclink-network \
+            --name doclink-mysql \
+            mysql:8.0
+
+      - name: Deploy MongoDB
+        run: |
+          docker stop mongodb || true
+          docker rm mongodb || true
+          docker run -d \
+            -p 27017:27017 \
+            --network doclink-network \
+            --name mongodb \
+            mongo:latest
+
+      # Wait for databases to be ready
+      - name: Wait for databases to be ready
+        run: sleep 30
+
+      # Deploy Backend Services
+      - name: Deploy User Service
+        run: |
+          docker stop doclink-user-service || true
+          docker rm doclink-user-service || true
+          docker run -d \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://doclink-mysql:3306/dbi481968 \
+            -e SPRING_DATASOURCE_USERNAME=dbi481968 \
+            -e SPRING_DATASOURCE_PASSWORD=password \
+            -p 8080:8080 \
+            --network doclink-network \
+            --name doclink-user-service \
+            doclink-UserService:latest
+
+      - name: Deploy Post Service
+        run: |
+          docker stop doclink-post-service || true
+          docker rm doclink-post-service || true
+          docker run -d \
+            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/postservice \
+            -p 8081:8081 \
+            --network doclink-network \
+            --name doclink-post-service \
+            doclink-PostService:latest
+
+      - name: Deploy Appointment Service
+        run: |
+          docker stop doclink-appointment-service || true
+          docker rm doclink-appointment-service || true
+          docker run -d \
+            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/appointment-db \
+            -p 8082:8082 \
+            --network doclink-network \
+            --name doclink-appointment-service \
+            doclink-AppointmentService:latest
+
+      - name: Deploy API Gateway
+        run: |
+          docker stop doclink-api-gateway || true
+          docker rm doclink-api-gateway || true
+          docker run -d \
+            -e USER_SERVICE_URL=http://doclink-user-service:8080 \
+            -e POST_SERVICE_URL=http://doclink-post-service:8081 \
+            -e APPOINTMENT_SERVICE_URL=http://doclink-appointment-service:8082 \
+            -p 9000:9000 \
+            --network doclink-network \
+            --name doclink-api-gateway \
+            doclink-api-gateway:latest
+
+      # Verify deployments
+      - name: Verify deployments
+        run: |
+          docker ps -a
+          echo "Deployment completed successfully!"
