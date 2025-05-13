@@ -1,4 +1,4 @@
-name: DocLink CI Pipeline
+name: DocLink CI/CD Pipeline
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build each service
-  build-services:
+  # Build and create Docker images for each service
+  build-and-push:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -50,3 +50,133 @@ jobs:
           else
             echo "Warning: No build output found in expected location"
           fi
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Login to GitHub Container Registry (only on main branch)
+      - name: Login to GitHub Container Registry
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and push Docker image (with push only on main branch)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./${{ matrix.service }}
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/doclink-${{ matrix.service }}:latest
+            ghcr.io/${{ github.repository_owner }}/doclink-${{ matrix.service }}:${{ github.sha }}
+
+  # Deploy services (only on main branch)
+  deploy:
+    needs: [build-and-push]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Create deployment script
+      - name: Create deployment script
+        run: |
+          cat << 'EOF' > deploy.sh
+          #!/bin/bash
+          set -e
+          
+          echo "Setting up Docker network..."
+          docker network create doclink-network || true
+          
+          echo "Starting MySQL..."
+          docker stop doclink-mysql || true
+          docker rm doclink-mysql || true
+          docker run -d \
+            -e MYSQL_DATABASE=dbi481968 \
+            -e MYSQL_USER=dbi481968 \
+            -e MYSQL_PASSWORD=password \
+            -e MYSQL_ROOT_PASSWORD=root_password \
+            -p 3306:3306 \
+            --network doclink-network \
+            --name doclink-mysql \
+            mysql:8.0
+          
+          echo "Starting MongoDB..."
+          docker stop mongodb || true
+          docker rm mongodb || true
+          docker run -d \
+            -p 27017:27017 \
+            --network doclink-network \
+            --name mongodb \
+            mongo:latest
+          
+          echo "Waiting for databases to be ready..."
+          sleep 30
+          
+          echo "Pulling and starting services..."
+          OWNER="${{ github.repository_owner }}"
+          SHA="${{ github.sha }}"
+          
+          # Pull and run User Service
+          docker pull ghcr.io/$OWNER/doclink-UserService:$SHA
+          docker stop doclink-user-service || true
+          docker rm doclink-user-service || true
+          docker run -d \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://doclink-mysql:3306/dbi481968 \
+            -e SPRING_DATASOURCE_USERNAME=dbi481968 \
+            -e SPRING_DATASOURCE_PASSWORD=password \
+            -p 8080:8080 \
+            --network doclink-network \
+            --name doclink-user-service \
+            ghcr.io/$OWNER/doclink-UserService:$SHA
+          
+          # Pull and run Post Service
+          docker pull ghcr.io/$OWNER/doclink-PostService:$SHA
+          docker stop doclink-post-service || true
+          docker rm doclink-post-service || true
+          docker run -d \
+            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/postservice \
+            -p 8081:8081 \
+            --network doclink-network \
+            --name doclink-post-service \
+            ghcr.io/$OWNER/doclink-PostService:$SHA
+          
+          # Pull and run Appointment Service
+          docker pull ghcr.io/$OWNER/doclink-AppointmentService:$SHA
+          docker stop doclink-appointment-service || true
+          docker rm doclink-appointment-service || true
+          docker run -d \
+            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/appointment-db \
+            -p 8082:8082 \
+            --network doclink-network \
+            --name doclink-appointment-service \
+            ghcr.io/$OWNER/doclink-AppointmentService:$SHA
+          
+          # Pull and run API Gateway
+          docker pull ghcr.io/$OWNER/doclink-api-gateway:$SHA
+          docker stop doclink-api-gateway || true
+          docker rm doclink-api-gateway || true
+          docker run -d \
+            -e USER_SERVICE_URL=http://doclink-user-service:8080 \
+            -e POST_SERVICE_URL=http://doclink-post-service:8081 \
+            -e APPOINTMENT_SERVICE_URL=http://doclink-appointment-service:8082 \
+            -p 9000:9000 \
+            --network doclink-network \
+            --name doclink-api-gateway \
+            ghcr.io/$OWNER/doclink-api-gateway:$SHA
+          
+          echo "Deployment completed. Checking running containers:"
+          docker ps
+          EOF
+          
+          chmod +x deploy.sh
+
+      # Run deployment script
+      - name: Run deployment
+        run: ./deploy.sh
