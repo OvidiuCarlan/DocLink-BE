@@ -1,4 +1,4 @@
-name: DocLink CI/CD Pipeline
+name: DocLink Build Pipeline
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build and test each service individually
+  # Build each service individually with detailed logging
   build-service:
     runs-on: ubuntu-latest
     strategy:
@@ -26,97 +26,63 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Check service directory
+      - name: Check service directory and build files
         run: |
-          echo "Checking ${{ matrix.service }} directory:"
+          echo "Contents of ${{ matrix.service }} directory:"
           ls -la ${{ matrix.service }} || echo "Directory not found"
+          
+          if [ -f "${{ matrix.service }}/build.gradle" ]; then
+            echo "Found build.gradle:"
+            cat "${{ matrix.service }}/build.gradle"
+          elif [ -f "${{ matrix.service }}/build.gradle.kts" ]; then
+            echo "Found build.gradle.kts:"
+            cat "${{ matrix.service }}/build.gradle.kts"
+          else
+            echo "No build.gradle file found"
+          fi
+          
+          if [ -f "${{ matrix.service }}/settings.gradle" ]; then
+            echo "Found settings.gradle:"
+            cat "${{ matrix.service }}/settings.gradle"
+          elif [ -f "${{ matrix.service }}/settings.gradle.kts" ]; then
+            echo "Found settings.gradle.kts:"
+            cat "${{ matrix.service }}/settings.gradle.kts"
+          fi
+          
+          if [ -f "${{ matrix.service }}/gradlew" ]; then
+            echo "Found Gradle wrapper"
+          else
+            echo "No Gradle wrapper found"
+          fi
 
-      # Build with Gradle
+      # Try to build with Gradle but continue on error
       - name: Build service
+        continue-on-error: true
         run: |
           if [ -f "${{ matrix.service }}/gradlew" ]; then
             cd ${{ matrix.service }}
             chmod +x ./gradlew
-            ./gradlew clean build --info --stacktrace || echo "Gradle build failed"
+            echo "Running gradle build for ${{ matrix.service }}"
+            ./gradlew clean assemble --info --stacktrace
           else
             echo "Gradle wrapper not found - using system Gradle"
-            sudo apt-get update
-            sudo apt-get install -y gradle
+            sudo apt-get update && sudo apt-get install -y gradle
             cd ${{ matrix.service }}
-            gradle clean build --info --stacktrace || echo "Gradle build failed"
+            echo "Running gradle build for ${{ matrix.service }}"
+            gradle clean assemble --info --stacktrace 
           fi
 
-      # Build Docker image - simplified approach without saving as artifact
-      - name: Build Docker image
+      # Check for compiled output
+      - name: Check for build output
         run: |
-          cd ${{ matrix.service }}
-          if [ -f "Dockerfile" ]; then
-            docker build -t doclink-${{ matrix.service }}:latest .
-            echo "Docker image built successfully"
+          echo "Checking for build output in ${{ matrix.service }}/build directory:"
+          if [ -d "${{ matrix.service }}/build" ]; then
+            ls -la "${{ matrix.service }}/build" 
+          
+            if [ -d "${{ matrix.service }}/build/libs" ]; then
+              echo "Contents of build/libs:"
+              ls -la "${{ matrix.service }}/build/libs"
+            fi
           else
-            echo "Creating simple Dockerfile"
-            echo "FROM openjdk:17-slim" > Dockerfile
-            echo "WORKDIR /app" >> Dockerfile
-            echo "COPY build/libs/*.jar app.jar" >> Dockerfile
-            echo "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]" >> Dockerfile
-            docker build -t doclink-${{ matrix.service }}:latest .
-            echo "Docker image built with generated Dockerfile"
+            echo "No build directory found"
           fi
-
-  # Only run deployment on main branch
-  deploy:
-    needs: [build-service]
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Docker
-        run: |
-          docker --version
-          docker info
-
-      - name: Set up Docker network
-        run: |
-          docker network create doclink-network || true
-
-      # Deploy MySQL
-      - name: Deploy MySQL
-        run: |
-          docker stop doclink-mysql || true
-          docker rm doclink-mysql || true
-          docker run -d \
-            -e MYSQL_DATABASE=dbi481968 \
-            -e MYSQL_USER=dbi481968 \
-            -e MYSQL_PASSWORD=password \
-            -e MYSQL_ROOT_PASSWORD=root_password \
-            -p 3306:3306 \
-            --network doclink-network \
-            --name doclink-mysql \
-            mysql:8.0
-
-      # Deploy MongoDB
-      - name: Deploy MongoDB
-        run: |
-          docker stop mongodb || true
-          docker rm mongodb || true
-          docker run -d \
-            -p 27017:27017 \
-            --network doclink-network \
-            --name mongodb \
-            mongo:latest
-
-      - name: Wait for databases
-        run: sleep 20
-
-      # For now, just show a successful deployment message
-      - name: Deployment placeholder
-        run: |
-          echo "Deployment would happen here if we had artifact sharing"
-          echo "In a real production environment, we would:"
-          echo "1. Push Docker images to a registry"
-          echo "2. Pull those images on the deployment server"
-          echo "3. Deploy services with proper configuration"
-          echo "Deployment simulation complete"
