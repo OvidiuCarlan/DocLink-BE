@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# Add this permissions block to ensure proper access to GHCR
 permissions:
   contents: read
   packages: write
@@ -40,7 +39,7 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      # Build with Gradle (skipping tests)
+      # Build with Gradle
       - name: Build service
         run: |
           if [ -f "${{ matrix.service }}/gradlew" ]; then
@@ -101,7 +100,7 @@ jobs:
           docker push ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:latest
           docker push ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:${{ github.sha }}
 
-  # Deploy services (only on main branch)
+  # Deploy services
   deploy:
     needs: [build-and-push]
     if: github.ref == 'refs/heads/main'
@@ -111,12 +110,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Convert repository owner to lowercase
       - name: Set lowercase repository owner
         run: |
           echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      # Create deployment script
       - name: Create deployment script
         run: |
           cat << 'EOF' > deploy.sh
@@ -209,6 +206,5 @@ jobs:
           
           chmod +x deploy.sh
 
-      # Run deployment script
       - name: Run deployment
         run: ./deploy.sh
