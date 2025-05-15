@@ -164,8 +164,21 @@ services:
       - ./k6-scripts:/scripts
     networks:
       - doclink-network
+    command: sleep infinity
     depends_on:
       - influxdb
+
+  test-data-generator:
+    build:
+      context: ./test-data-generator
+      dockerfile: Dockerfile
+    container_name: doclink-test-data-generator
+    networks:
+      - doclink-network
+    depends_on:
+      - user-service
+      - post-service
+      - appointment-service
 
 networks:
   doclink-network:
