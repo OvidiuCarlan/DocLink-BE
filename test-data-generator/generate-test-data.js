@@ -15,6 +15,40 @@ async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function waitForServices() {
+    console.log('Waiting for services to be ready...');
+    let servicesReady = false;
+    let attempts = 0;
+
+    while (!servicesReady && attempts < 30) { // Maximum 30 attempts (5 minutes)
+        try {
+            // Try to connect to the API Gateway
+            const response = await axios.get(`${API_URL}`, {
+                timeout: 5000,
+                validateStatus: () => true
+            });
+
+            if (response.status < 500) {
+                servicesReady = true;
+                console.log('Services are ready!');
+            } else {
+                attempts++;
+                console.log(`Services not ready yet, waiting... (Attempt ${attempts}/30)`);
+                await wait(10000); // Wait 10 seconds between attempts
+            }
+        } catch (error) {
+            attempts++;
+            console.log(`Error connecting to services, waiting... (Attempt ${attempts}/30)`);
+            await wait(10000); // Wait 10 seconds between attempts
+        }
+    }
+
+    if (!servicesReady) {
+        console.error('Services did not become ready within the timeout period.');
+        process.exit(1);
+    }
+}
+
 async function createUsers() {
     console.log(`Creating ${NUM_USERS} test users...`);
 
@@ -22,7 +56,7 @@ async function createUsers() {
         const firstName = faker.name.firstName();
         const lastName = faker.name.lastName();
         const email = `testuser_${i}_${Date.now()}@example.com`;
-        const password = 'Test123456';
+        const password = 'test';
 
         try {
             const response = await axios.post(`${API_URL}/users`, {
@@ -48,6 +82,10 @@ async function createUsers() {
             console.log(`Created user ${i+1}/${NUM_USERS}: ${email}`);
         } catch (error) {
             console.error(`Error creating user ${i+1}: ${error.message}`);
+            if (error.response) {
+                console.error('Response data:', error.response.data);
+                console.error('Response status:', error.response.status);
+            }
         }
 
         // Add a small delay to avoid overwhelming the API
@@ -100,6 +138,10 @@ async function createPosts() {
             console.log(`Created post ${i+1}/${NUM_POSTS}: ${title}`);
         } catch (error) {
             console.error(`Error creating post ${i+1}: ${error.message}`);
+            if (error.response) {
+                console.error('Response data:', error.response.data);
+                console.error('Response status:', error.response.status);
+            }
         }
 
         // Add a small delay
@@ -107,6 +149,11 @@ async function createPosts() {
     }
 
     console.log(`Created ${posts.length} posts successfully.`);
+
+    // Save posts data
+    const fs = require('fs');
+    fs.writeFileSync('/app/test-posts.json', JSON.stringify(posts));
+    console.log('Post data saved to test-posts.json');
 }
 
 async function createAppointments() {
@@ -159,6 +206,10 @@ async function createAppointments() {
             console.log(`Created appointment ${i+1}/${NUM_APPOINTMENTS}`);
         } catch (error) {
             console.error(`Error creating appointment ${i+1}: ${error.message}`);
+            if (error.response) {
+                console.error('Response data:', error.response.data);
+                console.error('Response status:', error.response.status);
+            }
         }
 
         // Add a small delay
@@ -166,14 +217,18 @@ async function createAppointments() {
     }
 
     console.log(`Created ${appointments.length} appointments successfully.`);
+
+    // Save appointments data
+    const fs = require('fs');
+    fs.writeFileSync('/app/test-appointments.json', JSON.stringify(appointments));
+    console.log('Appointment data saved to test-appointments.json');
 }
 
 async function main() {
     console.log('Starting test data generation...');
 
     // Wait for services to be ready
-    console.log('Waiting for services to be ready...');
-    await wait(30000);
+    await waitForServices();
 
     try {
         await createUsers();

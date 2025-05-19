@@ -78,6 +78,7 @@ services:
 networks:
   doclink-network:
     external: true
+    name: doclink-be_doclink-network
 
 volumes:
   prometheus_data:
