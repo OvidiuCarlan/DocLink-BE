@@ -40,25 +40,31 @@ public class Routes {
 
     @Bean
     public RouterFunction<ServerResponse> userServiceRoute(){
+        String userServiceUrl = System.getenv("USER_SERVICE_URL") != null ?
+                System.getenv("USER_SERVICE_URL") : "http://172.18.0.8:8080";
         return GatewayRouterFunctions.route("user_service")
                 .route(RequestPredicates.path("/users/**"),
-                        HandlerFunctions.http("http://user-service:8080"))
+                        HandlerFunctions.http(userServiceUrl))
                 .build();
     }
 
     @Bean
     public RouterFunction<ServerResponse> postServiceRoute(){
+        String postServiceUrl = System.getenv("POST_SERVICE_URL") != null ?
+                System.getenv("POST_SERVICE_URL") : "http://172.18.0.6:8081";
         return GatewayRouterFunctions.route("post_service")
                 .route(RequestPredicates.path("/posts/**"),
-                        HandlerFunctions.http("http://post-service:8081"))
+                        HandlerFunctions.http(postServiceUrl))
                 .build();
     }
 
     @Bean
     public RouterFunction<ServerResponse> appointmentServiceRoute(){
+        String appointmentServiceUrl = System.getenv("APPOINTMENT_SERVICE_URL") != null ?
+                System.getenv("APPOINTMENT_SERVICE_URL") : "http://172.18.0.7:8082";
         return GatewayRouterFunctions.route("appointment_service")
                 .route(RequestPredicates.path("/appointments/**"),
-                        HandlerFunctions.http("http://appointment-service:8082"))
+                        HandlerFunctions.http(appointmentServiceUrl))
                 .build();
     }
 }
