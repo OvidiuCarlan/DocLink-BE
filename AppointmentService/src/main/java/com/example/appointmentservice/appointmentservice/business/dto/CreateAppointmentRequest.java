@@ -7,12 +7,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateAppointmentRequest {
-    @NonNull
     private Long id;
     @NonNull
     private Long userId;
     @NonNull
-    private Long postId;
+    private String postId;
     @NonNull
     private String date;
     @NonNull

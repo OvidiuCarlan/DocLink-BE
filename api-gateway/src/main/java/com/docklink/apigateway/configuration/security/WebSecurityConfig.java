@@ -44,12 +44,12 @@ public class WebSecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(configurer ->
                         configurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(registry ->
-                                registry.anyRequest().permitAll()
 //                .authorizeHttpRequests(registry ->
-//                        registry.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-//                                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-//                                .anyRequest().authenticated()
+//                                registry.anyRequest().permitAll()
+                .authorizeHttpRequests(registry ->
+                        registry.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                                .anyRequest().authenticated()
                 )
                 .exceptionHandling(configure -> configure.authenticationEntryPoint(authenticationEntryPoint))
                 .addFilterBefore(authenticationRequestFilter, UsernamePasswordAuthenticationFilter.class);

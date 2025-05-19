@@ -25,7 +25,7 @@ public class CreateAppointmentCaseImpl implements CreateAppointmentUseCase {
     private AppointmentEntity savedNewAppointment(CreateAppointmentRequest request){
         AppointmentEntity newAppointment = AppointmentEntity.builder()
                 .userId(String.valueOf(request.getUserId()))
-                .postId(String.valueOf(request.getPostId()))
+                .postId(request.getPostId())
                 .date(request.getDate())
                 .time(request.getTime())
                 .notes(request.getNotes())
