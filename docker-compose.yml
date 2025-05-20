@@ -40,6 +40,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/dbi481968
       SPRING_DATASOURCE_USERNAME: dbi481968
       SPRING_DATASOURCE_PASSWORD: password
+      RABBITMQ_HOST: rabbitmq
     depends_on:
       - mysql
     networks:
@@ -70,6 +71,7 @@ services:
       - "8082:8082"
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/appointment-db
+      RABBITMQ_HOST: rabbitmq
     depends_on:
       - mongodb
     networks:
@@ -172,6 +174,18 @@ services:
       - "post-service:172.18.0.6"
       - "appointment-service:172.18.0.7"
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # RabbitMQ default port
+      - "15672:15672" # Management interface
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASSWORD=guest
+    networks:
+      doclink-network:
+        ipv4_address: 172.18.0.12
 
 networks:
   doclink-network:
