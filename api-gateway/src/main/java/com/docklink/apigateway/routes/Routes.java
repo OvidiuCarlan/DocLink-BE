@@ -67,4 +67,13 @@ public class Routes {
                         HandlerFunctions.http(appointmentServiceUrl))
                 .build();
     }
+    @Bean
+    public RouterFunction<ServerResponse> notificationRoutes() {
+        String userServiceUrl = System.getenv("USER_SERVICE_URL") != null ?
+                System.getenv("USER_SERVICE_URL") : "http://172.18.0.8:8080";
+        return GatewayRouterFunctions.route("notification_routes")
+                .route(RequestPredicates.path("/notifications/**"),
+                        HandlerFunctions.http(userServiceUrl))
+                .build();
+    }
 }
