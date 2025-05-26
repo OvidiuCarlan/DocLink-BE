@@ -3,5 +3,5 @@ export interface SignUpData {
     lastname: string;
     email: string;
     password: string;
-    role: string;
+    role: 'USER' | 'DOC';
   }
