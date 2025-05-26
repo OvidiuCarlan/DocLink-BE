@@ -28,7 +28,7 @@ public class FixedAuthenticationRequestFilter extends OncePerRequestFilter {
     private static final String SPRING_SECURITY_ROLE_PREFIX = "ROLE_";
     private static final List<String> PUBLIC_PATHS = Arrays.asList(
             "/users", "/users/tokens", "/v3/api-docs", "/swagger",
-//            "/api/users", "/api/users/tokens"
+            "/api/users", "/api/users/tokens"
     );
 
     @Autowired

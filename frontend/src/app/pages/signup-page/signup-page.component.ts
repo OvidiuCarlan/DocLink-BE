@@ -7,7 +7,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-signup-page',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CommonModule],
   templateUrl: './signup-page.component.html',
   styleUrl: './signup-page.component.scss'
 })
@@ -27,8 +27,8 @@ constructor(private fb: FormBuilder, private authService: AuthService, private r
   onSubmit(){
     if (this.signupForm.valid) {
       const formData = {
-        firstname: this.signupForm.value.firstName,
-        lastname: this.signupForm.value.lastName,
+        firstName: this.signupForm.value.firstName,
+        lastName: this.signupForm.value.lastName,
         email: this.signupForm.value.email,
         password: this.signupForm.value.password,
         role: this.signupForm.value.role

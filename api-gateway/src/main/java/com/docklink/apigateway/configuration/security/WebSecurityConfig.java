@@ -28,8 +28,8 @@ public class WebSecurityConfig {
     private static final String[] PUBLIC_ENDPOINTS = {
             "/users/tokens", // Login endpoint
             "/users",       // Registration endpoint
-//            "/api/users/tokens",
-//            "/api/users",
+            "/api/users/tokens",
+            "/api/users",
             "/v3/api-docs/**",
             "/swagger-resources/**",
             "/swagger-ui.html",
