@@ -102,13 +102,12 @@ services:
       - "appointment-service:172.18.0.7"
 
   frontend:
-    image: nginx:alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: doclink-frontend
     ports:
       - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ../Fronted/DocLink-FE/dist/doc-link/browser:/usr/share/nginx/html
     depends_on:
       - api-gateway
     networks:
