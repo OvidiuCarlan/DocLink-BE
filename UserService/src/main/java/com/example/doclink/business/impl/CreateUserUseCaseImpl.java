@@ -20,9 +20,9 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+
     @Override
     public CreateUserResponse createUser(CreateUserRequest request) {
-
         UserEntity savedUser = savedNewUser(request);
 
         return CreateUserResponse.builder()
@@ -31,15 +31,7 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
     }
 
     private UserEntity savedNewUser(CreateUserRequest request){
-        UserRoleEntity role = request.getRole() != null ?
-                request.getRole() :
-                roleRepository.findByRole(RoleEnum.USER);
-
-        if (role == null) {
-            role = roleRepository.save(UserRoleEntity.builder()
-                    .role(RoleEnum.USER)
-                    .build());
-        }
+        UserRoleEntity role = getUserRole(request.getRole());
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         UserEntity newUser = UserEntity.builder()
@@ -51,5 +43,25 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
                 .build();
 
         return userRepository.save(newUser);
+    }
+
+    private UserRoleEntity getUserRole(String roleString) {
+        RoleEnum roleEnum;
+
+        try {
+            roleEnum = (roleString != null && !roleString.isEmpty())
+                    ? RoleEnum.valueOf(roleString.toUpperCase())
+                    : RoleEnum.USER;
+        } catch (IllegalArgumentException e) {
+            roleEnum = RoleEnum.USER;
+        }
+
+        UserRoleEntity role = roleRepository.findByRole(roleEnum);
+
+        if (role == null) {
+            role = roleRepository.findByRole(RoleEnum.USER);
+        }
+
+        return role;
     }
 }

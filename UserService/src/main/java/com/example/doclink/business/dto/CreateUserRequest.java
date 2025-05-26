@@ -24,17 +24,6 @@ public class CreateUserRequest {
     private String email;
     @NotNull
     private String password;
-    private UserRoleEntity role;
+    private String role;
 
-    @JsonProperty("role")
-    public void setRoleFromString(String roleString) {
-        if (roleString != null && !roleString.trim().isEmpty()) {
-            try {
-                RoleEnum roleEnum = RoleEnum.valueOf(roleString.toUpperCase());
-                this.role = UserRoleEntity.builder().role(roleEnum).build();
-            } catch (IllegalArgumentException e) {
-                this.role = UserRoleEntity.builder().role(RoleEnum.USER).build();
-            }
-        }
-    }
 }
