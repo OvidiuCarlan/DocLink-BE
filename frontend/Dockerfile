@@ -1,15 +1,22 @@
 FROM node:18-alpine as build
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
-RUN npm run build
+RUN npm run build --prod
 
 FROM nginx:alpine
+# Remove default nginx website
 RUN rm -rf /usr/share/nginx/html/*
-COPY --from=build /app/dist/doc-link/ /usr/share/nginx/html/
+
+# Copy built app to nginx html directory
+COPY --from=build /app/dist/doc-link/browser /usr/share/nginx/html/
+
+# Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-RUN echo "Files in /usr/share/nginx/html:" && ls -la /usr/share/nginx/html/
+
+# Make sure nginx can read the files
+RUN chmod -R 755 /usr/share/nginx/html
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
