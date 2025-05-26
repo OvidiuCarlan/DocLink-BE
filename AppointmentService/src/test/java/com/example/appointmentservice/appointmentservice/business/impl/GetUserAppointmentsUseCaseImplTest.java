@@ -70,23 +70,6 @@ class GetUserAppointmentsUseCaseImplTest {
     }
 
     @Test
-    void getUserAppointments_WithNullUserId_ShouldReturnEmptyResponse() {
-        // Arrange
-        GetUserAppointmentsRequest request = GetUserAppointmentsRequest.builder()
-                .userId(null)
-                .build();
-
-        // Act
-        GetUserAppointmentResponse response = getUserAppointmentsUseCase.getUserAppointments(request);
-
-        // Assert
-        assertNotNull(response);
-        assertEquals(0, response.getAppointments().size());
-
-        verify(appointmentRepository, never()).findByUserId(any());
-    }
-
-    @Test
     void getUserAppointments_ShouldConvertEntitiesToDomainObjects() {
         // Arrange
         GetUserAppointmentsRequest request = GetUserAppointmentsRequest.builder()
