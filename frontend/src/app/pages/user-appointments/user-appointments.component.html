@@ -1,0 +1,5 @@
+<app-navbar></app-navbar>
+
+<div *ngFor="let appointment of appointments">
+    <app-user-appointment-card [appointment]="appointment"></app-user-appointment-card>
+</div>

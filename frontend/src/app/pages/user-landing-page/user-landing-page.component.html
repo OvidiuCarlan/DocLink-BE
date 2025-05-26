@@ -1,0 +1,8 @@
+<app-navbar></app-navbar>
+
+<div class="posts-container">
+    <app-post-card
+      *ngFor="let post of posts"
+      [post]="post">
+    </app-post-card>
+</div>

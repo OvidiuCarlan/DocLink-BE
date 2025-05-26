@@ -1,0 +1,16 @@
+<div class="appointment-card">
+    <div class="appointment-header">
+        <h3>{{ appointment.serviceTitle || 'No Service Title' }}</h3>
+      <p class="appointment-id">Appointment ID: {{ appointment.id }}</p>
+    </div>
+    <div class="appointment-body">
+      <p><strong>Date:</strong> {{ appointment.date }}</p>
+      <p><strong>Time:</strong> {{ appointment.time }}</p>
+      <p><strong>Notes:</strong> {{ appointment.notes }}</p>
+    </div>
+    <div class="appointment-footer">
+      <button class="btn cancel-btn">Cancel</button>
+      <button class="btn details-btn">View Details</button>
+    </div>
+  </div>
+  

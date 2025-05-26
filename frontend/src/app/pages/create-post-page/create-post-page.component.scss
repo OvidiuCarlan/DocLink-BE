@@ -1,0 +1,16 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background-image: url("../../../../src/assets/images/signupBackground.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.form-wrapper {
+    display: flex;
+    justify-content: center;     
+    margin-top: 100px;            
+    padding: 0 20px;     
+}
+  

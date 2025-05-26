@@ -1,0 +1,140 @@
+$post-border-radius: 12px;
+$post-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+$primary-color: #007bff;
+$primary-color-hover: #0056b3;
+$text-muted: #888;
+
+.post-card {
+    display: flex;
+    flex-direction: row; // horizontal layout
+    height: 280px;
+    width: 100%;
+    max-width: 500px;
+    border: 1px solid #ddd;
+    border-radius: $post-border-radius;
+    overflow: hidden;
+    box-shadow: $post-shadow;
+    background-color: #fff;
+  
+    .clinic-image {
+      width: 40%;
+      height: 100%;
+      object-fit: cover;
+    }
+  
+    .post-content {
+      width: 60%;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+  
+      .post-title {
+        font-size: 1.25rem;
+        margin-bottom: 8px;
+      }
+  
+      .post-category {
+        font-size: 0.9rem;
+        color: $text-muted;
+        margin-bottom: 8px;
+      }
+  
+      .post-text {
+        font-size: 1rem;
+        flex-grow: 1;
+        margin-bottom: 12px;
+      }
+  
+      .appointment-button {
+        background-color: $primary-color;
+        color: white;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        align-self: start;
+  
+        &:hover {
+          background-color: $primary-color-hover;
+        }
+      }
+    }
+  }
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  
+    .modal {
+      background-color: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  
+      h2 {
+        margin-top: 0;
+        font-size: 1.5rem;
+      }
+  
+      form {
+        display: flex;
+        flex-direction: column;
+  
+        label {
+          margin-top: 1rem;
+          font-weight: 500;
+  
+          input,
+          textarea {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.25rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+          }
+  
+          textarea {
+            resize: vertical;
+          }
+        }
+  
+        .modal-buttons {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 1.5rem;
+  
+          button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+  
+            &:first-child {
+              background-color: #007bff;
+              color: white;
+            }
+  
+            &:last-child {
+              background-color: #f0f0f0;
+              color: #333;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  

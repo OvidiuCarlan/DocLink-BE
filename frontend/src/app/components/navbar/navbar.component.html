@@ -1,0 +1,21 @@
+
+<nav class="navbar">
+    <div class="left-section">
+      <img src="assets/images/logo.svg" alt="DocLink Logo" class="logo" />
+    </div>
+  
+    <div class="center-section">
+      <input type="text" placeholder="Search on DocLink..." /> 
+    </div>
+  
+    <!-- (input)="onSearch($event)" -->
+
+    <div class="right-section">
+      <button (click)="navigateToLandingPage()">Home</button>
+      <button routerLink="/profile">Profile</button>
+      <button (click)="navigateToCreatePost()">Posts</button>
+    </div>
+  </nav>
+
+
+    

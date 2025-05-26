@@ -1,0 +1,69 @@
+$primary-color: #00b4d8;
+$light-bg: #f5faff;
+$error-color: #d90429;
+$card-radius: 12px;
+
+.create-post-card {
+  width: 600px;
+  margin: 0 auto;
+  background: $light-bg;
+  padding: 3rem;
+  border-radius: $card-radius;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+  h2 {
+    margin-bottom: 1.5rem;
+    color: darken($primary-color, 10%);
+  }
+
+  .form-group {
+    margin-bottom: 1.2rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: bold;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid lighten($primary-color, 35%);
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+
+      &:focus {
+        border-color: $primary-color;
+        outline: none;
+      }
+    }
+
+    .error {
+      color: $error-color;
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+    }
+  }
+
+  button {
+    background-color: $primary-color;
+    color: white;
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+
+    &:disabled {
+      background-color: lighten($primary-color, 30%);
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: darken($primary-color, 10%);
+    }
+  }
+}

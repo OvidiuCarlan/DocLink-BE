@@ -1,0 +1,33 @@
+<div class="post-card">
+    <img src="assets/images/clinic-image.jpg" alt="Clinic image" class="clinic-image" />
+    <div class="post-content">
+      <h2 class="post-title">{{ post.title }}</h2>
+      <p class="post-category">{{ post.category }}</p>
+      <p class="post-text">{{ post.content }}</p>
+      <button class="appointment-button" (click)="createAppointment()">Create Appointment</button>
+    </div>
+  </div>
+  
+  <div class="modal-backdrop" *ngIf="showModal">
+    <div class="modal">
+      <h2>Book Appointment</h2>
+      <form (ngSubmit)="submitAppointment()">
+        <label>
+          Date:
+          <input type="date" [(ngModel)]="appointmentDate" name="date" required />
+        </label>
+        <label>
+          Time:
+          <input type="time" [(ngModel)]="appointmentTime" name="time" required />
+        </label>
+        <label>
+          Notes:
+          <textarea [(ngModel)]="appointmentNotes" name="notes"></textarea>
+        </label>
+        <div class="modal-buttons">
+          <button type="submit">Confirm</button>
+          <button type="button" (click)="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
