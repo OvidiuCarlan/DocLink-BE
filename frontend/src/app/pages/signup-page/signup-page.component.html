@@ -1,4 +1,3 @@
-
 <div class="container">
     <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="signup-container">
 
@@ -23,14 +22,38 @@
             <label for="password">Password</label>
             <input id="password" formControlName="password" placeholder="Password" type="password"/>
         </div>
-          
+
+        <div class="form-group">
+            <label>Account Type</label>
+            <div class="radio-group">
+                <div class="radio-option">
+                    <input 
+                        type="radio" 
+                        id="patient" 
+                        value="USER" 
+                        formControlName="role"
+                    />
+                    <label for="patient" class="radio-label">Patient</label>
+                </div>
+                <div class="radio-option">
+                    <input 
+                        type="radio" 
+                        id="doctor" 
+                        value="DOC" 
+                        formControlName="role"
+                    />
+                    <label for="doctor" class="radio-label">Doctor</label>
+                </div>
+            </div>
+            <div class="error" *ngIf="signupForm.get('role')?.touched && signupForm.get('role')?.invalid">
+                Please select an account type.
+            </div>
+        </div>
 
         <div class="button-box">
-            <button type="submit" class="btn primary">Sign up!</button>
+            <button type="submit" class="btn primary" [disabled]="signupForm.invalid">Sign up!</button>
             <button type="button" class="btn secondary" (click)="goToLogin()">Log in!</button>
         </div>       
     
     </form>
 </div>
-
-
