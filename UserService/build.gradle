@@ -44,8 +44,11 @@ dependencies {
 
     // Test dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.mockito:mockito-junit-jupiter'
+    testImplementation 'com.h2database:h2' // Add H2 for testing
+    testImplementation 'org.springframework.amqp:spring-rabbit-test' // Add RabbitMQ test support
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

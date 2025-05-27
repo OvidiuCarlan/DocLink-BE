@@ -90,8 +90,11 @@ class CreateUserUseCaseImplTest {
                 .id(2L)
                 .role(RoleEnum.DOC)
                 .build();
-        request.setRole(docRole);
 
+        // Set the role as a STRING, not as a UserRoleEntity
+        request.setRole("DOC"); // This should be a string
+
+        when(roleRepository.findByRole(RoleEnum.DOC)).thenReturn(docRole);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(UserEntity.class))).thenReturn(savedUser);
 
@@ -102,16 +105,17 @@ class CreateUserUseCaseImplTest {
         assertNotNull(response);
         assertEquals(1L, response.getUserId());
 
-        verify(roleRepository, never()).findByRole(any());
+        verify(roleRepository).findByRole(RoleEnum.DOC);
         verify(passwordEncoder).encode("password123");
         verify(userRepository).save(any(UserEntity.class));
     }
 
     @Test
-    void createUser_WhenDefaultRoleNotFound_ShouldCreateNewRole() {
+    void createUser_WithInvalidRole_ShouldDefaultToUserRole() {
         // Arrange
-        when(roleRepository.findByRole(RoleEnum.USER)).thenReturn(null);
-        when(roleRepository.save(any(UserRoleEntity.class))).thenReturn(userRole);
+        request.setRole("INVALID_ROLE"); // Invalid role should default to USER
+
+        when(roleRepository.findByRole(RoleEnum.USER)).thenReturn(userRole);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(UserEntity.class))).thenReturn(savedUser);
 
@@ -123,7 +127,6 @@ class CreateUserUseCaseImplTest {
         assertEquals(1L, response.getUserId());
 
         verify(roleRepository).findByRole(RoleEnum.USER);
-        verify(roleRepository).save(any(UserRoleEntity.class));
         verify(passwordEncoder).encode("password123");
         verify(userRepository).save(any(UserEntity.class));
     }

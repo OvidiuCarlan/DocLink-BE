@@ -47,7 +47,7 @@ public class UserDeletionConsumer {
                     System.out.println("PostService: No posts found for user " + userId);
                 }
 
-                // Send completion confirmation 
+                // Send completion confirmation
                 UserDeletionMessage completionMessage = UserDeletionMessage.builder()
                         .userId(userId)
                         .userEmail(message.getUserEmail())

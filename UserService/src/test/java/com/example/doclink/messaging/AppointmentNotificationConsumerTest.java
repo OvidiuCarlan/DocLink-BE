@@ -59,10 +59,11 @@ class AppointmentNotificationConsumerTest {
         // Arrange
         notificationMessage.setUserId("invalid");
 
-        // Act & Assert - Should not throw exception
+        // Act & Assert - Should not throw exception but also not save
         assertDoesNotThrow(() ->
                 appointmentNotificationConsumer.consumeAppointmentCreatedNotification(notificationMessage));
 
+        // Verify that save was never called due to the exception
         verify(notificationRepository, never()).save(any());
     }
 }
