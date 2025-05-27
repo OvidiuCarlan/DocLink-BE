@@ -29,13 +29,13 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.user.deletion.exchange:user-deletion-exchange}")
     private String userDeletionExchangeName;
 
-    @Value("${rabbitmq.user.deletion.queue:user-deletion-queue}")
+    @Value("${rabbitmq.user.deletion.queue:appointment-service-deletion-queue}")
     private String userDeletionQueueName;
 
     @Value("${rabbitmq.user.deletion.routing.key:user.deletion.requested}")
     private String userDeletionRoutingKey;
 
-    //appointment notification
+
     @Bean
     public Queue queue() {
         return new Queue(queueName, true);

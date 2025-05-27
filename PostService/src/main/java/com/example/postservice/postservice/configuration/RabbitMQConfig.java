@@ -12,11 +12,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    // User deletion configuration
     @Value("${rabbitmq.user.deletion.exchange:user-deletion-exchange}")
     private String userDeletionExchangeName;
 
-    @Value("${rabbitmq.user.deletion.queue:user-deletion-queue}")
+    @Value("${rabbitmq.user.deletion.queue:post-service-deletion-queue}")
     private String userDeletionQueueName;
 
     @Value("${rabbitmq.user.deletion.routing.key:user.deletion.requested}")

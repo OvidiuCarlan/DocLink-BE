@@ -26,7 +26,7 @@ public class UserDeletionConsumer {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    @RabbitListener(queues = "${rabbitmq.user.deletion.queue:user-deletion-queue}")
+    @RabbitListener(queues = "${rabbitmq.user.deletion.queue:appointment-service-deletion-queue}")
     public void consumeUserDeletionRequest(UserDeletionMessage message) {
         if ("DELETION_REQUESTED".equals(message.getAction())) {
             try {
@@ -39,9 +39,10 @@ public class UserDeletionConsumer {
 
                 if (!userAppointments.isEmpty()) {
                     appointmentRepository.deleteAll(userAppointments);
+                    System.out.println("AppointmentService: Deleted " + deletedCount + " appointments for user " + userId);
+                } else {
+                    System.out.println("AppointmentService: No appointments found for user " + userId);
                 }
-
-                System.out.println("AppointmentService: Deleted " + deletedCount + " appointments for user " + userId);
 
                 // Send completion confirmation
                 UserDeletionMessage completionMessage = UserDeletionMessage.builder()
@@ -53,9 +54,11 @@ public class UserDeletionConsumer {
                         .build();
 
                 rabbitTemplate.convertAndSend(exchangeName, completionRoutingKey, completionMessage);
+                System.out.println("AppointmentService: Sent completion message for user " + userId);
 
             } catch (Exception e) {
                 System.err.println("AppointmentService: Error deleting user data: " + e.getMessage());
+                e.printStackTrace();
 
                 // Send failure notification
                 UserDeletionMessage failureMessage = UserDeletionMessage.builder()

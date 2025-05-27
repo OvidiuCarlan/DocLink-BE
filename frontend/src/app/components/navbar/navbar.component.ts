@@ -25,6 +25,6 @@ export class NavbarComponent {
     this.router.navigate(['/doc-landing']);
   }
   navigateToProfilePage(){
-    this.router.navigate(['/doc-landing']);
+    this.router.navigate(['/profile']);
   }
 }
