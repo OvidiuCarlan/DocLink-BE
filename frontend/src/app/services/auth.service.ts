@@ -5,7 +5,13 @@ import { SignUpData } from '../../shared/models/signup-model';
 import { Router } from '@angular/router';
 import { TokenManagerService } from './token-manager.service';
 
-
+interface UserProfile {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -41,5 +47,15 @@ export class AuthService {
         return throwError(() => error);
       })
     );
+  }
+
+  getUserById(userId: number): Observable<UserProfile> {
+    return this.http.get<UserProfile>(`${this.url}/${userId}`)
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error fetching user profile:', error);
+          return throwError(() => error);
+        })
+      );
   }
 }

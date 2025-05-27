@@ -1,0 +1,207 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background-image: url("../../../../src/assets/images/signupBackground.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.profile-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.error {
+  color: #dc3545;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.profile-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.profile-info {
+  flex: 1;
+
+  h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 2rem;
+    font-weight: 600;
+  }
+
+  .role {
+    color: #007bff;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+  }
+
+  .email {
+    color: #666;
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.profile-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+
+  &.btn-danger {
+    background-color: #dc3545;
+    color: white;
+
+    &:hover {
+      background-color: #c82333;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+    }
+  }
+}
+
+.appointments-section {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+  h2 {
+    margin: 0 0 1.5rem 0;
+    color: #333;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+}
+
+.no-appointments {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-style: italic;
+}
+
+.appointments-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.appointment-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.appointment-date {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #dee2e6;
+
+  .date {
+    color: #333;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .time {
+    color: #007bff;
+    font-weight: 600;
+    background: #e3f2fd;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+  }
+}
+
+.appointment-details {
+  .notes {
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 1rem;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-actions {
+    justify-content: center;
+  }
+
+  .appointments-grid {
+    grid-template-columns: 1fr;
+  }
+}

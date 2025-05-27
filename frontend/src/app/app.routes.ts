@@ -5,6 +5,7 @@ import { DocLandingPageComponent } from './pages/doc-landing-page/doc-landing-pa
 import { UserLandingPageComponent } from './pages/user-landing-page/user-landing-page.component';
 import { CreatePostPageComponent } from './pages/create-post-page/create-post-page.component';
 import { UserAppointmentsComponent } from './pages/user-appointments/user-appointments.component';
+import { UserProfilePageComponent } from './pages/user-profile-page/user-profile-page.component';
 
 export const routes: Routes = [
     {path: '', redirectTo: 'signup', pathMatch: 'full'},
@@ -24,4 +25,7 @@ export const routes: Routes = [
 
     {path: '', redirectTo: 'user-app', pathMatch: 'full'},
     {path: 'user-app', component: UserAppointmentsComponent},
+
+    {path: '', redirectTo: 'profile', pathMatch: 'full'},
+    {path: 'profile', component: UserProfilePageComponent},
 ];

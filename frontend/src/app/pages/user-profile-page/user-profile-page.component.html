@@ -1,0 +1,56 @@
+<app-navbar></app-navbar>
+
+<div class="profile-container">
+  <div class="profile-content">
+    <div *ngIf="loading" class="loading">
+      <p>Loading profile...</p>
+    </div>
+
+    <div *ngIf="error" class="error">
+      <p>{{ error }}</p>
+    </div>
+
+    <div *ngIf="!loading && !error && user" class="profile-section">
+      <!-- User Information Card -->
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="profile-avatar">
+            {{ user.firstName.charAt(0) }}{{ user.lastName.charAt(0) }}
+          </div>
+          <div class="profile-info">
+            <h1>{{ user.firstName }} {{ user.lastName }}</h1>
+            <p class="role">{{ getRoleDisplayName(user.role) }}</p>
+            <p class="email">{{ user.email }}</p>
+          </div>
+        </div>
+        
+        <div class="profile-actions">
+          <button class="btn btn-danger" (click)="onDeleteAccount()">
+            Delete Account
+          </button>
+        </div>
+      </div>
+
+      <!-- Appointments Section -->
+      <div class="appointments-section">
+        <h2>Your Appointments</h2>
+        
+        <div *ngIf="appointments.length === 0" class="no-appointments">
+          <p>You have no appointments scheduled.</p>
+        </div>
+
+        <div *ngIf="appointments.length > 0" class="appointments-grid">
+          <div *ngFor="let appointment of appointments" class="appointment-card">
+            <div class="appointment-date">
+              <span class="date">{{ formatDate(appointment.date) }}</span>
+              <span class="time">{{ appointment.time }}</span>
+            </div>
+            <div class="appointment-details">
+              <p class="notes">{{ appointment.notes }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
