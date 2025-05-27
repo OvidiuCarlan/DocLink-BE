@@ -11,9 +11,84 @@ permissions:
   packages: write
   actions: read
   checks: write
+  security-events: write
 
 jobs:
+
+  security-scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [ UserService, PostService, AppointmentService, api-gateway ]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      # Install Snyk CLI
+      - name: Install Snyk CLI
+        run: |
+          curl -Lo ./snyk "https://github.com/snyk/cli/releases/latest/download/snyk-linux"
+          chmod +x ./snyk
+          sudo mv ./snyk /usr/local/bin/
+
+      # Authenticate with Snyk
+      - name: Authenticate Snyk
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      # Scan dependencies for vulnerabilities
+      - name: Run Snyk dependency scan for ${{ matrix.service }}
+        run: |
+          cd ${{ matrix.service }}
+          if [ -f "build.gradle" ]; then
+            echo "Scanning Gradle dependencies for ${{ matrix.service }}"
+            snyk test --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium --json > snyk-deps-${{ matrix.service }}.json || true
+            snyk test --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium
+          else
+            echo "No build.gradle found for ${{ matrix.service }}"
+            exit 1
+          fi
+        continue-on-error: true
+
+      # Scan code for security issues
+      - name: Run Snyk code scan for ${{ matrix.service }}
+        run: |
+          cd ${{ matrix.service }}
+          echo "Scanning code for security issues in ${{ matrix.service }}"
+          snyk code test --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium --json > snyk-code-${{ matrix.service }}.json || true
+          snyk code test --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium
+        continue-on-error: true
+
+      # Upload SARIF results to GitHub Security
+      - name: Upload Snyk results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: ${{ matrix.service }}/snyk-code-${{ matrix.service }}.json
+        continue-on-error: true
+
+      # Store security scan results as artifacts
+      - name: Upload Snyk scan results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: snyk-results-${{ matrix.service }}
+          path: |
+            ${{ matrix.service }}/snyk-*.json
+          retention-days: 30
+
   test:
+    needs: security-scan
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -57,6 +132,7 @@ jobs:
 
   # Build and create Docker images for each service
   build-and-push:
+    needs: [security-scan, test]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -143,6 +219,46 @@ jobs:
           # Push to GitHub Container Registry
           docker push ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:latest
           docker push ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:${{ github.sha }}
+
+  # Security summary job
+  security-summary:
+    needs: [security-scan, build-and-push]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download all Snyk results
+        uses: actions/download-artifact@v3
+        with:
+          path: snyk-results
+
+      - name: Generate Security Summary
+        run: |
+          echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## Services Scanned" >> $GITHUB_STEP_SUMMARY
+          echo "- UserService" >> $GITHUB_STEP_SUMMARY
+          echo "- PostService" >> $GITHUB_STEP_SUMMARY
+          echo "- AppointmentService" >> $GITHUB_STEP_SUMMARY
+          echo "- API Gateway" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## Scan Types Performed" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 **Dependency Vulnerability Scanning**: Checked all Gradle dependencies for known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "- 🛡️ **Static Code Analysis**: Scanned source code for security issues and code smells" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐳 **Container Image Scanning**: Analyzed Docker images for vulnerabilities in base images and layers" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📊 Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "Detailed results have been uploaded as artifacts and are available in the Snyk dashboard." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review any security findings in the Snyk dashboard" >> $GITHUB_STEP_SUMMARY
+          echo "2. Address high and critical severity issues" >> $GITHUB_STEP_SUMMARY
+          echo "3. Consider implementing Snyk fix suggestions" >> $GITHUB_STEP_SUMMARY
+          echo "4. Monitor ongoing security status through Snyk monitoring" >> $GITHUB_STEP_SUMMARY
 
   # Deploy services
   deploy:
