@@ -1,6 +1,7 @@
 package com.example.doclink.controller;
 
 import com.example.doclink.business.cases.CreateUserUseCase;
+import com.example.doclink.business.cases.DeleteUserUseCase;
 import com.example.doclink.business.cases.GetUserUseCase;
 import com.example.doclink.business.dto.*;
 import jakarta.validation.Valid;
@@ -18,6 +19,8 @@ public class UserController {
 
     private final CreateUserUseCase createUserUseCase;
     private final GetUserUseCase getUserUseCase;
+    private final DeleteUserUseCase deleteUserUseCase;
+
 
 
     @Autowired
@@ -37,5 +40,10 @@ public class UserController {
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest loginRequest){
         LoginResponse loginResponse = loginUseCase.login(loginRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(loginResponse);
+    }
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
+        deleteUserUseCase.initiateUserDeletion(userId);
+        return ResponseEntity.accepted().build(); // 202 - Deletion initiated
     }
 }

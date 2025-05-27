@@ -24,6 +24,23 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.routing.key:appointment.created}")
     private String routingKey;
 
+
+    @Value("${rabbitmq.user.deletion.exchange:user-deletion-exchange}")
+    private String userDeletionExchangeName;
+
+    @Value("${rabbitmq.user.deletion.queue:user-deletion-queue}")
+    private String userDeletionQueueName;
+
+    @Value("${rabbitmq.user.deletion.completion.queue:user-deletion-completion-queue}")
+    private String userDeletionCompletionQueueName;
+
+    @Value("${rabbitmq.user.deletion.routing.key:user.deletion.requested}")
+    private String userDeletionRoutingKey;
+
+    @Value("${rabbitmq.user.deletion.completion.routing.key:user.deletion.completed}")
+    private String userDeletionCompletionRoutingKey;
+
+    //appointment notifications
     @Bean
     public Queue queue() {
         return new Queue(queueName, true);
@@ -39,6 +56,24 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(queue).to(exchange).with(routingKey);
     }
 
+    //delete account
+    @Bean
+    public TopicExchange userDeletionExchange() {
+        return new TopicExchange(userDeletionExchangeName);
+    }
+
+    @Bean
+    public Queue userDeletionCompletionQueue() {
+        return new Queue(userDeletionCompletionQueueName, true);
+    }
+
+    @Bean
+    public Binding userDeletionCompletionBinding() {
+        return BindingBuilder.bind(userDeletionCompletionQueue())
+                .to(userDeletionExchange())
+                .with(userDeletionCompletionRoutingKey);
+    }
+
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
@@ -50,4 +85,7 @@ public class RabbitMQConfig {
         template.setMessageConverter(jsonMessageConverter());
         return template;
     }
+
+
+
 }

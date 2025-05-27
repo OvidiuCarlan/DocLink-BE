@@ -5,6 +5,7 @@ import { TokenManagerService } from '../../services/token-manager.service';
 import { AuthService } from '../../services/auth.service';
 import { AppointmentService } from '../../services/appointment.service';
 import { GetAppointmentsResponse, AppointmentData } from '../../../shared/models/appointment-model';
+import { Router } from '@angular/router';
 
 interface UserProfile {
   id: number;
@@ -26,11 +27,13 @@ export class UserProfilePageComponent implements OnInit {
   appointments: AppointmentData[] = [];
   loading = true;
   error: string | null = null;
+  isDeleting = false;
 
   constructor(
     private tokenManager: TokenManagerService,
     private authService: AuthService,
-    private appointmentService: AppointmentService
+    private appointmentService: AppointmentService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -73,9 +76,26 @@ export class UserProfilePageComponent implements OnInit {
   }
 
   onDeleteAccount(): void {
-    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      // TODO: Implement delete account functionality
-      alert('Delete account functionality will be implemented soon.');
+    if (!this.user) return;
+
+    const confirmMessage = `Are you sure you want to delete your account?\n\nThis will permanently delete:\n- Your profile information\n- All your posts\n- All your appointments\n- All your notifications\n\nThis action cannot be undone and is required by GDPR regulations.`;
+    
+    if (confirm(confirmMessage)) {
+      this.isDeleting = true;
+      
+      this.authService.deleteUserAccount(this.user.id).subscribe({
+        next: () => {
+          alert('Your account has been successfully deleted. You will now be logged out.');
+          // Clear local storage and redirect to login
+          localStorage.clear();
+          this.router.navigate(['/login']);
+        },
+        error: (err) => {
+          console.error('Error deleting account:', err);
+          alert('Failed to delete account. Please try again or contact support.');
+          this.isDeleting = false;
+        }
+      });
     }
   }
 

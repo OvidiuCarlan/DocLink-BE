@@ -25,8 +25,11 @@
         </div>
         
         <div class="profile-actions">
-          <button class="btn btn-danger" (click)="onDeleteAccount()">
-            Delete Account
+          <button 
+            class="btn btn-danger" 
+            (click)="onDeleteAccount()"
+            [disabled]="isDeleting">
+            {{ isDeleting ? 'Deleting Account...' : 'Delete Account' }}
           </button>
         </div>
       </div>

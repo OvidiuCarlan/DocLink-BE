@@ -58,4 +58,13 @@ export class AuthService {
         })
       );
   }
+  deleteUserAccount(userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${userId}`)
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error deleting user account:', error);
+          return throwError(() => error);
+        })
+      );
+  }
 }
