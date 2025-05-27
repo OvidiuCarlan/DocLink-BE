@@ -1,0 +1,70 @@
+<app-navbar></app-navbar>
+
+<div class="notifications-container">
+  <div class="notifications-header">
+    <h1>Notifications</h1>
+    <div class="header-actions">
+      <div class="filter-buttons">
+        <button 
+          class="filter-btn" 
+          [class.active]="filter === 'all'"
+          (click)="filter = 'all'">
+          All ({{ notifications.length }})
+        </button>
+        <button 
+          class="filter-btn" 
+          [class.active]="filter === 'unread'"
+          (click)="filter = 'unread'">
+          Unread ({{ unreadCount }})
+        </button>
+      </div>
+      <button 
+        *ngIf="unreadCount > 0" 
+        class="mark-all-btn"
+        (click)="markAllAsRead()">
+        Mark all as read
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">
+    <p>Loading notifications...</p>
+  </div>
+
+  <div *ngIf="!loading" class="notifications-content">
+    <div *ngIf="filteredNotifications.length === 0" class="no-notifications">
+      <div class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="#ccc">
+          <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+        </svg>
+        <h3>{{ filter === 'unread' ? 'No unread notifications' : 'No notifications yet' }}</h3>
+        <p>{{ filter === 'unread' ? 'All caught up!' : 'New notifications will appear here' }}</p>
+      </div>
+    </div>
+
+    <div class="notifications-list">
+      <div *ngFor="let notification of filteredNotifications" 
+           class="notification-card"
+           [class.unread]="!notification.isRead"
+           (click)="markAsRead(notification)">
+        <div class="notification-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+          </svg>
+        </div>
+        
+        <div class="notification-content">
+          <p class="notification-message">{{ notification.message }}</p>
+          <div class="notification-meta">
+            <span class="notification-time">{{ formatDate(notification.createdAt) }}</span>
+            <span *ngIf="notification.appointmentId" class="appointment-id">
+              Appointment: {{ notification.appointmentId }}
+            </span>
+          </div>
+        </div>
+
+        <div *ngIf="!notification.isRead" class="unread-indicator"></div>
+      </div>
+    </div>
+  </div>
+</div>

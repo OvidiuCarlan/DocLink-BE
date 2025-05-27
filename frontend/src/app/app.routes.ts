@@ -6,6 +6,7 @@ import { UserLandingPageComponent } from './pages/user-landing-page/user-landing
 import { CreatePostPageComponent } from './pages/create-post-page/create-post-page.component';
 import { UserAppointmentsComponent } from './pages/user-appointments/user-appointments.component';
 import { UserProfilePageComponent } from './pages/user-profile-page/user-profile-page.component';
+import { NotificationsPageComponent } from './pages/notifications-page/notifications-page.component';
 
 export const routes: Routes = [
     {path: '', redirectTo: 'signup', pathMatch: 'full'},
@@ -28,4 +29,7 @@ export const routes: Routes = [
 
     {path: '', redirectTo: 'profile', pathMatch: 'full'},
     {path: 'profile', component: UserProfilePageComponent},
+
+    {path: '', redirectTo: 'notifications', pathMatch: 'full'},
+    {path: 'notifications', component: NotificationsPageComponent},
 ];

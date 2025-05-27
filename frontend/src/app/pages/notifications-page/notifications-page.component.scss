@@ -1,0 +1,208 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.notifications-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.notifications-header {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+
+  h1 {
+    margin: 0 0 1.5rem 0;
+    color: #333;
+    font-size: 2rem;
+    font-weight: 600;
+  }
+
+  .header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .filter-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e0e0e0;
+    background: white;
+    color: #666;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+
+    &:hover {
+      background-color: #f0f0f0;
+    }
+
+    &.active {
+      background-color: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+  }
+
+  .mark-all-btn {
+    padding: 0.5rem 1rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: #218838;
+    }
+  }
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.notifications-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.no-notifications {
+  padding: 4rem 2rem;
+
+  .empty-state {
+    text-align: center;
+    max-width: 300px;
+    margin: 0 auto;
+
+    svg {
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      margin: 0 0 0.5rem 0;
+      color: #333;
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin: 0;
+      color: #666;
+    }
+  }
+}
+
+.notifications-list {
+  .notification-card {
+    display: flex;
+    padding: 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    align-items: flex-start;
+    gap: 1rem;
+
+    &:hover {
+      background-color: #f8f9fa;
+    }
+
+    &.unread {
+      background-color: #f0f8ff;
+      border-left: 4px solid #007bff;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .notification-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background-color: #e3f2fd;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #007bff;
+  }
+
+  .notification-content {
+    flex: 1;
+
+    .notification-message {
+      margin: 0 0 0.5rem 0;
+      color: #333;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .notification-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #666;
+
+      .appointment-id {
+        background-color: #f0f0f0;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+      }
+    }
+  }
+
+  .unread-indicator {
+    width: 12px;
+    height: 12px;
+    background-color: #007bff;
+    border-radius: 50%;
+    margin-top: 0.25rem;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .notifications-container {
+    padding: 1rem;
+  }
+
+  .notifications-header {
+    padding: 1.5rem;
+
+    .header-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filter-buttons {
+      justify-content: center;
+    }
+  }
+
+  .notification-card {
+    padding: 1rem !important;
+  }
+}
