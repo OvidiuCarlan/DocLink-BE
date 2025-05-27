@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Your existing application services first
   mongodb:
     image: mongo
     container_name: mongodb
@@ -43,6 +42,7 @@ services:
       RABBITMQ_HOST: rabbitmq
     depends_on:
       - mysql
+      - rabbitmq
     networks:
       doclink-network:
         ipv4_address: 172.18.0.8
@@ -56,8 +56,10 @@ services:
       - "8081:8081"
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/postservice
+      RABBITMQ_HOST: rabbitmq
     depends_on:
       - mongodb
+      - rabbitmq
     networks:
       doclink-network:
         ipv4_address: 172.18.0.6
@@ -74,6 +76,7 @@ services:
       RABBITMQ_HOST: rabbitmq
     depends_on:
       - mongodb
+      - rabbitmq
     networks:
       doclink-network:
         ipv4_address: 172.18.0.7

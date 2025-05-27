@@ -23,6 +23,9 @@ public class UserDeletionConsumer {
     @RabbitListener(queues = "${rabbitmq.user.deletion.completion.queue:user-deletion-completion-queue}")
     public void consumeUserDeletionCompletion(UserDeletionMessage message) {
         try {
+            System.out.println("UserService: Received completion message - Action: " + message.getAction() +
+                    ", Service: " + message.getServiceName() + ", User: " + message.getUserId());
+
             if ("DELETION_COMPLETED".equals(message.getAction())) {
                 Long userId = message.getUserId();
                 AtomicInteger completedServices = deletionProgress.computeIfAbsent(userId, k -> new AtomicInteger(0));
@@ -45,6 +48,7 @@ public class UserDeletionConsumer {
             }
         } catch (Exception e) {
             System.err.println("Error processing user deletion completion: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

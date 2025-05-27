@@ -28,6 +28,9 @@ public class UserDeletionConsumer {
 
     @RabbitListener(queues = "${rabbitmq.user.deletion.queue:appointment-service-deletion-queue}")
     public void consumeUserDeletionRequest(UserDeletionMessage message) {
+        System.out.println("AppointmentService: Received deletion request - Action: " + message.getAction() +
+                ", User: " + message.getUserId());
+
         if ("DELETION_REQUESTED".equals(message.getAction())) {
             try {
                 Long userId = message.getUserId();
@@ -57,7 +60,7 @@ public class UserDeletionConsumer {
                 System.out.println("AppointmentService: Sent completion message for user " + userId);
 
             } catch (Exception e) {
-                System.err.println("AppointmentService: Error deleting user data: " + e.getMessage());
+                System.err.println("AppointmentService: Error deleting user data for user " + message.getUserId() + ": " + e.getMessage());
                 e.printStackTrace();
 
                 // Send failure notification

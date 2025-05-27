@@ -24,12 +24,8 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.routing.key:appointment.created}")
     private String routingKey;
 
-
     @Value("${rabbitmq.user.deletion.exchange:user-deletion-exchange}")
     private String userDeletionExchangeName;
-
-    @Value("${rabbitmq.user.deletion.queue:user-deletion-queue}")
-    private String userDeletionQueueName;
 
     @Value("${rabbitmq.user.deletion.completion.queue:user-deletion-completion-queue}")
     private String userDeletionCompletionQueueName;
@@ -40,7 +36,7 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.user.deletion.completion.routing.key:user.deletion.completed}")
     private String userDeletionCompletionRoutingKey;
 
-    //appointment notifications
+    // Appointment notifications
     @Bean
     public Queue queue() {
         return new Queue(queueName, true);
@@ -56,7 +52,7 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(queue).to(exchange).with(routingKey);
     }
 
-    //delete account
+    // User deletion
     @Bean
     public TopicExchange userDeletionExchange() {
         return new TopicExchange(userDeletionExchangeName);
@@ -85,7 +81,4 @@ public class RabbitMQConfig {
         template.setMessageConverter(jsonMessageConverter());
         return template;
     }
-
-
-
 }

@@ -25,6 +25,8 @@ public class DeleteUserUseCaseImpl implements DeleteUserUseCase {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        System.out.println("UserService: Initiating deletion for user: " + userId + " (" + user.getEmail() + ")");
+
         // Send deletion request to all microservices
         UserDeletionMessage message = UserDeletionMessage.builder()
                 .userId(userId)
@@ -35,21 +37,26 @@ public class DeleteUserUseCaseImpl implements DeleteUserUseCase {
                 .build();
 
         userDeletionPublisher.publishUserDeletionRequest(message);
-        System.out.println("Initiated deletion process for user: " + userId);
+        System.out.println("UserService: Published deletion request for user: " + userId);
     }
 
     @Override
     public void completeUserDeletion(Long userId) {
         try {
+            System.out.println("UserService: Starting final deletion for user: " + userId);
+
             // Delete user's notifications first
+            int notificationCount = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).size();
             notificationRepository.deleteAll(notificationRepository.findByUserIdOrderByCreatedAtDesc(userId));
+            System.out.println("UserService: Deleted " + notificationCount + " notifications for user: " + userId);
 
             // Delete the user
             userRepository.deleteById(userId);
+            System.out.println("UserService: Successfully deleted user: " + userId);
 
-            System.out.println("Successfully deleted user: " + userId);
         } catch (Exception e) {
-            System.err.println("Failed to delete user " + userId + ": " + e.getMessage());
+            System.err.println("UserService: Failed to delete user " + userId + ": " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Failed to complete user deletion", e);
         }
     }
