@@ -1,4 +1,4 @@
-name: DocLink CI/CD Pipeline
+name: DocLink CI/CD Pipeline with Security Scanning
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
   security-events: write
 
 jobs:
-
+  # Security scanning job - runs first to catch issues early
   security-scan:
     runs-on: ubuntu-latest
     strategy:
@@ -24,10 +24,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -69,17 +69,9 @@ jobs:
           snyk code test --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium
         continue-on-error: true
 
-      # Upload SARIF results to GitHub Security
-      - name: Upload Snyk results to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
-        with:
-          sarif_file: ${{ matrix.service }}/snyk-code-${{ matrix.service }}.json
-        continue-on-error: true
-
       # Store security scan results as artifacts
       - name: Upload Snyk scan results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: snyk-results-${{ matrix.service }}
@@ -97,10 +89,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -150,10 +142,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -175,12 +167,12 @@ jobs:
 
       # Set up Docker Buildx
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       # Login to GitHub Container Registry (only on main branch)
       - name: Login to GitHub Container Registry
         if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -208,6 +200,41 @@ jobs:
           # Build the image locally with lowercase name
           docker build -t doclink-${{ matrix.lowercase }}:latest .
 
+      # Install Snyk CLI for Docker scanning
+      - name: Install Snyk CLI
+        run: |
+          curl -Lo ./snyk "https://github.com/snyk/cli/releases/latest/download/snyk-linux"
+          chmod +x ./snyk
+          sudo mv ./snyk /usr/local/bin/
+
+      # Scan Docker image with Snyk
+      - name: Run Snyk container scan
+        run: |
+          snyk auth ${{ secrets.SNYK_TOKEN }}
+          snyk container test doclink-${{ matrix.lowercase }}:latest --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium --json > snyk-container-${{ matrix.service }}.json || true
+          snyk container test doclink-${{ matrix.lowercase }}:latest --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      # Monitor Docker image with Snyk (creates ongoing monitoring)
+      - name: Monitor Docker image with Snyk
+        if: github.ref == 'refs/heads/main'
+        run: |
+          snyk container monitor doclink-${{ matrix.lowercase }}:latest --org=${{ secrets.SNYK_ORG_ID }} --project-name="doclink-${{ matrix.lowercase }}-container"
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      # Store container scan results
+      - name: Upload Snyk container scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snyk-container-results-${{ matrix.service }}
+          path: snyk-container-${{ matrix.service }}.json
+          retention-days: 30
+
       # Push Docker image (only on main branch)
       - name: Push Docker image
         if: github.ref == 'refs/heads/main'
@@ -228,9 +255,11 @@ jobs:
 
     steps:
       - name: Download all Snyk results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: snyk-results
+          pattern: snyk-*
+          merge-multiple: true
 
       - name: Generate Security Summary
         run: |
@@ -262,13 +291,13 @@ jobs:
 
   # Deploy services
   deploy:
-    needs: [build-and-push]
+    needs: [build-and-push, security-summary]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set lowercase repository owner
         run: |
