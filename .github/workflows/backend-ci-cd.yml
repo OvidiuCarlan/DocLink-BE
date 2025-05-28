@@ -14,7 +14,7 @@ permissions:
   security-events: write
 
 jobs:
-  # Security scanning job - runs first to catch issues early
+  # Security scanning job
   security-scan:
     runs-on: ubuntu-latest
     strategy:
@@ -217,7 +217,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      # Monitor Docker image with Snyk (creates ongoing monitoring)
+      # Monitor Docker image with Snyk
       - name: Monitor Docker image with Snyk
         if: github.ref == 'refs/heads/main'
         run: |
