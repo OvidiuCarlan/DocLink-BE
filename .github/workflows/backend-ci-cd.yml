@@ -122,13 +122,17 @@ jobs:
           reporter: java-junit
           fail-on-error: false
 
-  # Build and create Docker images for each service
   build-and-push:
-    needs: [security-scan, test]
+    needs: [ security-scan, test ]
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+
     strategy:
       matrix:
-        service: [UserService, PostService, AppointmentService, api-gateway]
+        service: [ UserService, PostService, AppointmentService, api-gateway ]
         include:
           - service: UserService
             lowercase: userservice
@@ -139,6 +143,10 @@ jobs:
           - service: api-gateway
             lowercase: api-gateway
       fail-fast: false
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository_owner }}/doclink-${{ matrix.lowercase }}
 
     steps:
       - name: Checkout repository
@@ -151,8 +159,7 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      # Build with Gradle
-      - name: Build service
+      - name: Build service ${{ matrix.service }}
         run: |
           if [ -f "${{ matrix.service }}/gradlew" ]; then
             cd ${{ matrix.service }}
@@ -165,87 +172,39 @@ jobs:
             gradle clean assemble -x test
           fi
 
-      # Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Login to GitHub Container Registry (only on main branch)
+      - name: Set lowercase image name
+        run: echo "LOWERCASE_IMAGE_NAME=$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Login to GitHub Container Registry
-        if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Convert repository owner to lowercase
-      - name: Set lowercase repository owner
-        run: |
-          echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-      # Build Docker image locally first
-      - name: Build Docker image
-        run: |
-          cd ${{ matrix.service }}
-          if [ -f "Dockerfile" ]; then
-            echo "Using existing Dockerfile"
-          else
-            echo "Creating simple Dockerfile"
-            echo "FROM openjdk:17-slim" > Dockerfile
-            echo "WORKDIR /app" >> Dockerfile
-            echo "COPY build/libs/*.jar app.jar" >> Dockerfile
-            echo "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]" >> Dockerfile
-          fi
-          
-          # Build the image locally with lowercase name
-          docker build -t doclink-${{ matrix.lowercase }}:latest .
-
-      # Install Snyk CLI for Docker scanning
-      - name: Install Snyk CLI
-        run: |
-          curl -Lo ./snyk "https://github.com/snyk/cli/releases/latest/download/snyk-linux"
-          chmod +x ./snyk
-          sudo mv ./snyk /usr/local/bin/
-
-      # Scan Docker image with Snyk
-      - name: Run Snyk container scan
-        run: |
-          snyk auth ${{ secrets.SNYK_TOKEN }}
-          snyk container test doclink-${{ matrix.lowercase }}:latest --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium --json > snyk-container-${{ matrix.service }}.json || true
-          snyk container test doclink-${{ matrix.lowercase }}:latest --org=${{ secrets.SNYK_ORG_ID }} --severity-threshold=medium
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-      # Monitor Docker image with Snyk
-      - name: Monitor Docker image with Snyk
-        if: github.ref == 'refs/heads/main'
-        run: |
-          snyk container monitor doclink-${{ matrix.lowercase }}:latest --org=${{ secrets.SNYK_ORG_ID }} --project-name="doclink-${{ matrix.lowercase }}-container"
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-      # Store container scan results
-      - name: Upload Snyk container scan results
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          name: snyk-container-results-${{ matrix.service }}
-          path: snyk-container-${{ matrix.service }}.json
-          retention-days: 30
+          images: ${{ env.REGISTRY }}/${{ env.LOWERCASE_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
 
-      # Push Docker image (only on main branch)
-      - name: Push Docker image
-        if: github.ref == 'refs/heads/main'
-        run: |
-          # Tag with GHCR and push
-          docker tag doclink-${{ matrix.lowercase }}:latest ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:latest
-          docker tag doclink-${{ matrix.lowercase }}:latest ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:${{ github.sha }}
-          
-          # Push to GitHub Container Registry
-          docker push ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:latest
-          docker push ghcr.io/${{ env.REPO_OWNER }}/doclink-${{ matrix.lowercase }}:${{ github.sha }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   # Security summary job
   security-summary:
@@ -289,9 +248,9 @@ jobs:
           echo "3. Consider implementing Snyk fix suggestions" >> $GITHUB_STEP_SUMMARY
           echo "4. Monitor ongoing security status through Snyk monitoring" >> $GITHUB_STEP_SUMMARY
 
-  # Deploy services
+    # Deploy services
   deploy:
-    needs: [build-and-push, security-summary]
+    needs: [ build-and-push, security-summary ]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
@@ -308,10 +267,10 @@ jobs:
           cat << 'EOF' > deploy.sh
           #!/bin/bash
           set -e
-          
+
           echo "Setting up Docker network..."
           docker network create doclink-network || true
-          
+
           echo "Starting MySQL..."
           docker stop doclink-mysql || true
           docker rm doclink-mysql || true
@@ -324,7 +283,7 @@ jobs:
             --network doclink-network \
             --name doclink-mysql \
             mysql:8.0
-          
+
           echo "Starting MongoDB..."
           docker stop mongodb || true
           docker rm mongodb || true
@@ -333,51 +292,68 @@ jobs:
             --network doclink-network \
             --name mongodb \
             mongo:latest
-          
+
+          echo "Starting RabbitMQ..."
+          docker stop doclink-rabbitmq || true
+          docker rm doclink-rabbitmq || true
+          docker run -d \
+            -e RABBITMQ_DEFAULT_USER=guest \
+            -e RABBITMQ_DEFAULT_PASSWORD=guest \
+            -p 5672:5672 \
+            -p 15672:15672 \
+            --network doclink-network \
+            --name doclink-rabbitmq \
+            rabbitmq:3-management
+
           echo "Waiting for databases to be ready..."
           sleep 30
-          
+
           echo "Pulling and starting services..."
           OWNER="${{ env.REPO_OWNER }}"
-          SHA="${{ github.sha }}"
-          
+
+          # Use latest tag for main branch deployments
+          TAG="latest"
+
           # Pull and run User Service
-          docker pull ghcr.io/$OWNER/doclink-userservice:$SHA
+          docker pull ghcr.io/$OWNER/doclink-userservice:$TAG
           docker stop doclink-user-service || true
           docker rm doclink-user-service || true
           docker run -d \
             -e SPRING_DATASOURCE_URL=jdbc:mysql://doclink-mysql:3306/dbi481968 \
             -e SPRING_DATASOURCE_USERNAME=dbi481968 \
             -e SPRING_DATASOURCE_PASSWORD=password \
+            -e RABBITMQ_HOST=doclink-rabbitmq \
             -p 8080:8080 \
             --network doclink-network \
             --name doclink-user-service \
-            ghcr.io/$OWNER/doclink-userservice:$SHA
-          
+            ghcr.io/$OWNER/doclink-userservice:$TAG
+
           # Pull and run Post Service
-          docker pull ghcr.io/$OWNER/doclink-postservice:$SHA
+          docker pull ghcr.io/$OWNER/doclink-postservice:$TAG
           docker stop doclink-post-service || true
           docker rm doclink-post-service || true
           docker run -d \
             -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/postservice \
+            -e RABBITMQ_HOST=doclink-rabbitmq \
             -p 8081:8081 \
             --network doclink-network \
             --name doclink-post-service \
-            ghcr.io/$OWNER/doclink-postservice:$SHA
-          
+            ghcr.io/$OWNER/doclink-postservice:$TAG
+
           # Pull and run Appointment Service
-          docker pull ghcr.io/$OWNER/doclink-appointmentservice:$SHA
+          docker pull ghcr.io/$OWNER/doclink-appointmentservice:$TAG
           docker stop doclink-appointment-service || true
           docker rm doclink-appointment-service || true
           docker run -d \
             -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/appointment-db \
+            -e RABBITMQ_HOST=doclink-rabbitmq \
             -p 8082:8082 \
             --network doclink-network \
             --name doclink-appointment-service \
-            ghcr.io/$OWNER/doclink-appointmentservice:$SHA
-          
+            ghcr.io/$OWNER/doclink-appointmentservice:$TAG
+
           # Pull and run API Gateway
-          docker pull ghcr.io/$OWNER/doclink-api-gateway:$SHA
+          docker pull ghcr.io/$OWNER/doclink-api-gateway:$TAG
           docker stop doclink-api-gateway || true
           docker rm doclink-api-gateway || true
           docker run -d \
@@ -387,12 +363,12 @@ jobs:
             -p 9000:9000 \
             --network doclink-network \
             --name doclink-api-gateway \
-            ghcr.io/$OWNER/doclink-api-gateway:$SHA
-          
+            ghcr.io/$OWNER/doclink-api-gateway:$TAG
+
           echo "Deployment completed. Checking running containers:"
           docker ps
           EOF
-          
+
           chmod +x deploy.sh
 
       - name: Run deployment
