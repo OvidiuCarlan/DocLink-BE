@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    //appointment notification
+    // Appointment notification configuration
     @Value("${rabbitmq.queue.name:appointment-notification-queue}")
     private String queueName;
 
@@ -25,7 +25,6 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.routing.key:appointment.created}")
     private String routingKey;
 
-    //delete account
     @Value("${rabbitmq.user.deletion.exchange:user-deletion-exchange}")
     private String userDeletionExchangeName;
 
@@ -35,23 +34,35 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.user.deletion.routing.key:user.deletion.requested}")
     private String userDeletionRoutingKey;
 
+    @Value("${rabbitmq.user.deletion.completion.routing.key:user.deletion.completed}")
+    private String userDeletionCompletionRoutingKey;
 
+    // New Saga configuration
+    @Value("${rabbitmq.user.deletion.saga.exchange:user-deletion-saga-exchange}")
+    private String sagaExchangeName;
+
+    @Value("${rabbitmq.user.deletion.saga.queue:appointment-service-saga-queue}")
+    private String sagaQueueName;
+
+    @Value("${rabbitmq.user.deletion.saga.routing.key:user.deletion.saga}")
+    private String sagaRoutingKey;
+
+    // Appointment notification beans
     @Bean
-    public Queue queue() {
+    public Queue appointmentQueue() {
         return new Queue(queueName, true);
     }
 
     @Bean
-    public TopicExchange exchange() {
+    public TopicExchange appointmentExchange() {
         return new TopicExchange(exchangeName);
     }
 
     @Bean
-    public Binding binding(Queue queue, TopicExchange exchange) {
-        return BindingBuilder.bind(queue).to(exchange).with(routingKey);
+    public Binding appointmentBinding() {
+        return BindingBuilder.bind(appointmentQueue()).to(appointmentExchange()).with(routingKey);
     }
 
-    // delete account
     @Bean
     public TopicExchange userDeletionExchange() {
         return new TopicExchange(userDeletionExchangeName);
@@ -67,6 +78,24 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(userDeletionQueue())
                 .to(userDeletionExchange())
                 .with(userDeletionRoutingKey);
+    }
+
+    // Saga beans
+    @Bean
+    public TopicExchange userDeletionSagaExchange() {
+        return new TopicExchange(sagaExchangeName);
+    }
+
+    @Bean
+    public Queue userDeletionSagaQueue() {
+        return new Queue(sagaQueueName, true);
+    }
+
+    @Bean
+    public Binding userDeletionSagaBinding() {
+        return BindingBuilder.bind(userDeletionSagaQueue())
+                .to(userDeletionSagaExchange())
+                .with(sagaRoutingKey);
     }
 
     @Bean

@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface AppointmentRepository extends MongoRepository<AppointmentEntity, String> {
     List<AppointmentEntity> findByUserId(String userId);
+
 }
