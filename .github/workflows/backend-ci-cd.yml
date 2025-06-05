@@ -206,51 +206,10 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-  # Security summary job
-  security-summary:
-    needs: [security-scan, build-and-push]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-      - name: Download all Snyk results
-        uses: actions/download-artifact@v4
-        with:
-          path: snyk-results
-          pattern: snyk-*
-          merge-multiple: true
-
-      - name: Generate Security Summary
-        run: |
-          echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "## Services Scanned" >> $GITHUB_STEP_SUMMARY
-          echo "- UserService" >> $GITHUB_STEP_SUMMARY
-          echo "- PostService" >> $GITHUB_STEP_SUMMARY
-          echo "- AppointmentService" >> $GITHUB_STEP_SUMMARY
-          echo "- API Gateway" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "## Scan Types Performed" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔍 **Dependency Vulnerability Scanning**: Checked all Gradle dependencies for known vulnerabilities" >> $GITHUB_STEP_SUMMARY
-          echo "- 🛡️ **Static Code Analysis**: Scanned source code for security issues and code smells" >> $GITHUB_STEP_SUMMARY
-          echo "- 🐳 **Container Image Scanning**: Analyzed Docker images for vulnerabilities in base images and layers" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "## 📊 Scan Results" >> $GITHUB_STEP_SUMMARY
-          echo "Detailed results have been uploaded as artifacts and are available in the Snyk dashboard." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "## 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "1. Review any security findings in the Snyk dashboard" >> $GITHUB_STEP_SUMMARY
-          echo "2. Address high and critical severity issues" >> $GITHUB_STEP_SUMMARY
-          echo "3. Consider implementing Snyk fix suggestions" >> $GITHUB_STEP_SUMMARY
-          echo "4. Monitor ongoing security status through Snyk monitoring" >> $GITHUB_STEP_SUMMARY
 
     # Deploy services
   deploy:
-    needs: [ build-and-push, security-summary ]
+    needs: [ build-and-push ]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
