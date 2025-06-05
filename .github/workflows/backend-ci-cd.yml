@@ -233,6 +233,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # FIXED: The metadata extraction step
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -241,8 +242,11 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=sha,prefix={{branch}}-,enable={{is_default_branch}}
+            type=sha,prefix=pr-{{branch}}-,enable={{is_pr}}
             type=raw,value=latest,enable={{is_default_branch}}
+          flavor: |
+            latest=false
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -254,8 +258,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-
-  # Security summary jobAdd commentMore actions
+  # Security summary job
   security-summary:
     needs: [security-scan, build-and-push]
     runs-on: ubuntu-latest
@@ -297,7 +300,7 @@ jobs:
           echo "3. Consider implementing Snyk fix suggestions" >> $GITHUB_STEP_SUMMARY
           echo "4. Monitor ongoing security status through Snyk monitoring" >> $GITHUB_STEP_SUMMARY
 
-    # Deploy services
+  # Deploy services
   deploy:
     needs: [ build-and-push, security-summary ]
     if: github.ref == 'refs/heads/main'
