@@ -3,7 +3,7 @@ WORKDIR /app
 COPY . /app/
 RUN gradle build -x test
 
-FROM openjdk:17-jre-slim-bookworm
+FROM openjdk:17-slim
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8082
