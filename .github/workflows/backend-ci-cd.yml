@@ -127,6 +127,85 @@ jobs:
             ${{ matrix.service }}/snyk-*.json
           retention-days: 30
 
+  frontend-security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # Install Snyk CLI
+      - name: Install Snyk CLI
+        run: |
+          curl -Lo ./snyk "https://github.com/snyk/cli/releases/latest/download/snyk-linux"
+          chmod +x ./snyk
+          sudo mv ./snyk /usr/local/bin/
+          snyk --version
+
+      # Authenticate with Snyk
+      - name: Authenticate Snyk
+        run: |
+          if [ -z "${{ secrets.SNYK_TOKEN }}" ]; then
+            echo "ERROR: SNYK_TOKEN secret is not set"
+            echo '{"error": "SNYK_TOKEN not configured"}' > snyk-error.json
+            exit 1
+          fi
+          snyk auth ${{ secrets.SNYK_TOKEN }}
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Snyk dependency scan for frontend
+        run: |
+          cd frontend
+          echo '{"info": "Frontend dependency scan starting"}' > snyk-deps-frontend.json
+          
+          if snyk test --org=${{ secrets.SNYK_ORG_ID || 'default' }} --severity-threshold=high --json > snyk-deps-frontend.json 2>&1; then
+            echo "Frontend dependency scan completed successfully"
+          else
+            echo "Frontend dependency scan found issues or failed - results saved to JSON"
+          fi
+          
+          if [ ! -s "snyk-deps-frontend.json" ]; then
+            echo '{"error": "No scan output generated"}' > snyk-deps-frontend.json
+          fi
+        continue-on-error: true
+
+      - name: Run Snyk code scan for frontend
+        run: |
+          cd frontend
+          echo '{"info": "Frontend code scan starting"}' > snyk-code-frontend.json
+          
+          if snyk code test --org=${{ secrets.SNYK_ORG_ID || 'default' }} --severity-threshold=high --json > snyk-code-frontend.json 2>&1; then
+            echo "Frontend code scan completed successfully"
+          else
+            echo "Frontend code scan found issues or failed - results saved to JSON"
+          fi
+          
+          if [ ! -s "snyk-code-frontend.json" ]; then
+            echo '{"error": "No code scan output generated"}' > snyk-code-frontend.json
+          fi
+        continue-on-error: true
+
+      - name: Upload Snyk scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snyk-results-frontend
+          path: |
+            frontend/snyk-*.json
+          retention-days: 30
+
   test:
     needs: security-scan
     runs-on: ubuntu-latest
@@ -170,8 +249,37 @@ jobs:
           reporter: java-junit
           fail-on-error: false
 
+  frontend-test:
+    needs: frontend-security-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm run test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build --prod
+
   build-and-push:
-    needs: [ security-scan, test ]
+    needs: [ security-scan, test, frontend-security-scan, frontend-test ]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     permissions:
@@ -180,16 +288,23 @@ jobs:
 
     strategy:
       matrix:
-        service: [ UserService, PostService, AppointmentService, api-gateway ]
+        service: [ UserService, PostService, AppointmentService, api-gateway, frontend ]
         include:
           - service: UserService
             lowercase: userservice
+            type: java
           - service: PostService
             lowercase: postservice
+            type: java
           - service: AppointmentService
             lowercase: appointmentservice
+            type: java
           - service: api-gateway
             lowercase: api-gateway
+            type: java
+          - service: frontend
+            lowercase: frontend
+            type: node
       fail-fast: false
 
     env:
@@ -200,14 +315,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 17 (for Java services)
+        if: matrix.type == 'java'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
 
-      - name: Build service ${{ matrix.service }}
+      - name: Set up Node.js (for frontend)
+        if: matrix.type == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build Java service ${{ matrix.service }}
+        if: matrix.type == 'java'
         run: |
           if [ -f "${{ matrix.service }}/gradlew" ]; then
             cd ${{ matrix.service }}
@@ -219,6 +344,13 @@ jobs:
             cd ${{ matrix.service }}
             gradle clean assemble -x test
           fi
+
+      - name: Build frontend
+        if: matrix.type == 'node'
+        run: |
+          cd frontend
+          npm ci
+          npm run build --prod
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -233,7 +365,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # FIXED: The metadata extraction step
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -242,11 +373,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-,enable={{is_default_branch}}
-            type=sha,prefix=pr-{{branch}}-,enable={{is_pr}}
+            type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
-          flavor: |
-            latest=false
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -260,7 +388,7 @@ jobs:
 
   # Security summary job
   security-summary:
-    needs: [security-scan, build-and-push]
+    needs: [security-scan, frontend-security-scan, build-and-push]
     runs-on: ubuntu-latest
     if: always()
 
@@ -282,10 +410,11 @@ jobs:
           echo "- PostService" >> $GITHUB_STEP_SUMMARY
           echo "- AppointmentService" >> $GITHUB_STEP_SUMMARY
           echo "- API Gateway" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend (Angular)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           echo "## Scan Types Performed" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔍 **Dependency Vulnerability Scanning**: Checked all Gradle dependencies for known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 **Dependency Vulnerability Scanning**: Checked all Gradle/NPM dependencies for known vulnerabilities" >> $GITHUB_STEP_SUMMARY
           echo "- 🛡️ **Static Code Analysis**: Scanned source code for security issues and code smells" >> $GITHUB_STEP_SUMMARY
           echo "- 🐳 **Container Image Scanning**: Analyzed Docker images for vulnerabilities in base images and layers" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -314,114 +443,4 @@ jobs:
         run: |
           echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Create deployment script
-        run: |
-          cat << 'EOF' > deploy.sh
-          #!/bin/bash
-          set -e
-
-          echo "Setting up Docker network..."
-          docker network create doclink-network || true
-
-          echo "Starting MySQL..."
-          docker stop doclink-mysql || true
-          docker rm doclink-mysql || true
-          docker run -d \
-            -e MYSQL_DATABASE=dbi481968 \
-            -e MYSQL_USER=dbi481968 \
-            -e MYSQL_PASSWORD=password \
-            -e MYSQL_ROOT_PASSWORD=root_password \
-            -p 3306:3306 \
-            --network doclink-network \
-            --name doclink-mysql \
-            mysql:8.0
-
-          echo "Starting MongoDB..."
-          docker stop mongodb || true
-          docker rm mongodb || true
-          docker run -d \
-            -p 27017:27017 \
-            --network doclink-network \
-            --name mongodb \
-            mongo:latest
-
-          echo "Starting RabbitMQ..."
-          docker stop doclink-rabbitmq || true
-          docker rm doclink-rabbitmq || true
-          docker run -d \
-            -e RABBITMQ_DEFAULT_USER=guest \
-            -e RABBITMQ_DEFAULT_PASSWORD=guest \
-            -p 5672:5672 \
-            -p 15672:15672 \
-            --network doclink-network \
-            --name doclink-rabbitmq \
-            rabbitmq:3-management
-
-          echo "Waiting for databases to be ready..."
-          sleep 30
-
-          echo "Pulling and starting services..."
-          OWNER="${{ env.REPO_OWNER }}"
-
-          # Use latest tag for main branch deployments
-          TAG="latest"
-
-          # Pull and run User Service
-          docker pull ghcr.io/$OWNER/doclink-userservice:$TAG
-          docker stop doclink-user-service || true
-          docker rm doclink-user-service || true
-          docker run -d \
-            -e SPRING_DATASOURCE_URL=jdbc:mysql://doclink-mysql:3306/dbi481968 \
-            -e SPRING_DATASOURCE_USERNAME=dbi481968 \
-            -e SPRING_DATASOURCE_PASSWORD=password \
-            -e RABBITMQ_HOST=doclink-rabbitmq \
-            -p 8080:8080 \
-            --network doclink-network \
-            --name doclink-user-service \
-            ghcr.io/$OWNER/doclink-userservice:$TAG
-
-          # Pull and run Post Service
-          docker pull ghcr.io/$OWNER/doclink-postservice:$TAG
-          docker stop doclink-post-service || true
-          docker rm doclink-post-service || true
-          docker run -d \
-            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/postservice \
-            -e RABBITMQ_HOST=doclink-rabbitmq \
-            -p 8081:8081 \
-            --network doclink-network \
-            --name doclink-post-service \
-            ghcr.io/$OWNER/doclink-postservice:$TAG
-
-          # Pull and run Appointment Service
-          docker pull ghcr.io/$OWNER/doclink-appointmentservice:$TAG
-          docker stop doclink-appointment-service || true
-          docker rm doclink-appointment-service || true
-          docker run -d \
-            -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/appointment-db \
-            -e RABBITMQ_HOST=doclink-rabbitmq \
-            -p 8082:8082 \
-            --network doclink-network \
-            --name doclink-appointment-service \
-            ghcr.io/$OWNER/doclink-appointmentservice:$TAG
-
-          # Pull and run API Gateway
-          docker pull ghcr.io/$OWNER/doclink-api-gateway:$TAG
-          docker stop doclink-api-gateway || true
-          docker rm doclink-api-gateway || true
-          docker run -d \
-            -e USER_SERVICE_URL=http://doclink-user-service:8080 \
-            -e POST_SERVICE_URL=http://doclink-post-service:8081 \
-            -e APPOINTMENT_SERVICE_URL=http://doclink-appointment-service:8082 \
-            -p 9000:9000 \
-            --network doclink-network \
-            --name doclink-api-gateway \
-            ghcr.io/$OWNER/doclink-api-gateway:$TAG
-
-          echo "Deployment completed. Checking running containers:"
-          docker ps
-          EOF
-
-          chmod +x deploy.sh
-
-      - name: Run deployment
-        run: ./deploy.sh
+      - nam
