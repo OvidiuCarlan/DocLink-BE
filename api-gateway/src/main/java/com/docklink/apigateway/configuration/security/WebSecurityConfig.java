@@ -34,7 +34,7 @@ public class WebSecurityConfig {
             "/swagger-resources/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
-            "/actuator/*"
+            "/actuator/**"
     };
 
     @Bean
@@ -54,6 +54,7 @@ public class WebSecurityConfig {
                                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                                 .requestMatchers(HttpMethod.DELETE, "/users/**").authenticated() // Allow DELETE for authenticated users
                                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
+                                .requestMatchers(HttpMethod.GET, "actuator/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling(configure -> configure.authenticationEntryPoint(authenticationEntryPoint))
