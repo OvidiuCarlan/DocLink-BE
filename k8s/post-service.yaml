@@ -13,10 +13,12 @@ spec:
       labels:
         app: post-service
     spec:
+      imagePullSecrets:
+        - name: "ghcr-secret"
       containers:
         - name: post-service
-          image: doclink/post-service:latest
-          imagePullPolicy: Never
+          image: ghcr.io/ovidiucarlan/doclink-postservice:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8081
           env:

@@ -13,10 +13,12 @@ spec:
       labels:
         app: frontend
     spec:
+      imagePullSecrets:
+        - name: "ghcr-secret"
       containers:
         - name: frontend
-          image: doclink/frontend:latest
-          imagePullPolicy: Never
+          image: ghcr.io/ovidiucarlan/doclink-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
 ---

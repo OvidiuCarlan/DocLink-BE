@@ -13,10 +13,12 @@ spec:
       labels:
         app: appointment-service
     spec:
+      imagePullSecrets:
+        - name: "ghcr-secret"
       containers:
         - name: appointment-service
-          image: doclink/appointment-service:latest
-          imagePullPolicy: Never
+          image: ghcr.io/ovidiucarlan/doclink-appointmentservice:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8082
           env:
