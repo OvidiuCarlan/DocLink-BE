@@ -47,18 +47,18 @@ public class WebSecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(configurer ->
                         configurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-//                .authorizeHttpRequests(registry ->
-//                                registry.anyRequest().permitAll()
                 .authorizeHttpRequests(registry ->
-                        registry.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                                .requestMatchers(HttpMethod.DELETE, "/users/**").authenticated() // Allow DELETE for authenticated users
-                                .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
-                                .requestMatchers(HttpMethod.GET, "actuator/**").permitAll()
-                                .anyRequest().authenticated()
-                )
-                .exceptionHandling(configure -> configure.authenticationEntryPoint(authenticationEntryPoint))
-                .addFilterBefore(authenticationRequestFilter, UsernamePasswordAuthenticationFilter.class);
+                                registry.anyRequest().permitAll());
+//                .authorizeHttpRequests(registry ->
+//                        registry.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+//                                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+//                                .requestMatchers(HttpMethod.DELETE, "/users/**").authenticated() // Allow DELETE for authenticated users
+//                                .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
+//                                .requestMatchers(HttpMethod.GET, "actuator/**").permitAll()
+//                                .anyRequest().authenticated()
+//                )
+//                .exceptionHandling(configure -> configure.authenticationEntryPoint(authenticationEntryPoint))
+//                .addFilterBefore(authenticationRequestFilter, UsernamePasswordAuthenticationFilter.class);
         return httpSecurity.build();
     }
 
