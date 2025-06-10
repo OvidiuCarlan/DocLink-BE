@@ -38,6 +38,11 @@ public class FixedAuthenticationRequestFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
+        // AUTHENTICATION DISABLED: Allow all requests to pass through without any checks
+        System.out.println("Authentication disabled - allowing request: " + request.getRequestURI());
+        chain.doFilter(request, response);
+
+        /*
         // Skip token check for public endpoints
         String requestPath = request.getRequestURI();
         //logging
@@ -68,8 +73,10 @@ public class FixedAuthenticationRequestFilter extends OncePerRequestFilter {
             logger.error("Error validating access token", e);
             sendAuthenticationError(response);
         }
+         */
     }
 
+    /*
     private void sendAuthenticationError(HttpServletResponse response) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.flushBuffer();
@@ -87,4 +94,6 @@ public class FixedAuthenticationRequestFilter extends OncePerRequestFilter {
         usernamePasswordAuthenticationToken.setDetails(accessToken);
         SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
     }
+
+     */
 }
