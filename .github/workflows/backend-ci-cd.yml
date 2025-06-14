@@ -305,7 +305,13 @@ jobs:
         run: |
           DEPLOYMENT=${{ matrix.k8s_name }}
           NAMESPACE=doclink
-          IMAGE_TAG=${{ github.event.inputs.image_tag }}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          IMAGE_TAG="latest"
+          else
+          IMAGE_TAG="${{ github.sha }}"
+          fi
           IMAGE_REPO="${{ env.REGISTRY }}/${{ env.LOWERCASE_IMAGE_NAME }}"
           
           echo "Detecting containers in deployment $DEPLOYMENT..."
