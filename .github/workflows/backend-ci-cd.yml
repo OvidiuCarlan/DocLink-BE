@@ -190,6 +190,7 @@ jobs:
             type: java
           - service: AppointmentService
             lowercase: appointmentservice
+            k8s_name: appointment-service
             type: java
           - service: api-gateway
             lowercase: api-gateway
@@ -298,7 +299,7 @@ jobs:
       - name: Deploy to AKS
         id: deploy-aks
         run: |
-          DEPLOYMENT=${{ matrix.lowercase }}
+          DEPLOYMENT=${{ matrix.k8s_name }}
           NAMESPACE=doclink
           IMAGE_TAG=${{ github.event.inputs.image_tag }}
           IMAGE_REPO="${{ env.REGISTRY }}/${{ env.LOWERCASE_IMAGE_NAME }}"
