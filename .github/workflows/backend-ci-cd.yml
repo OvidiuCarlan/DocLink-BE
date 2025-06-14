@@ -184,9 +184,11 @@ jobs:
         include:
           - service: UserService
             lowercase: userservice
+            k8s_name: user-service
             type: java
           - service: PostService
             lowercase: postservice
+            k8s_name: post-service
             type: java
           - service: AppointmentService
             lowercase: appointmentservice
@@ -194,9 +196,11 @@ jobs:
             type: java
           - service: api-gateway
             lowercase: api-gateway
+            k8s_name: api-gateway
             type: java
           - service: frontend
             lowercase: frontend
+            k8s_name: frontend
             type: node
       fail-fast: false
 
