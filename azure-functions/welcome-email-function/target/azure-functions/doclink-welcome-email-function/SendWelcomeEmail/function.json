@@ -1,0 +1,15 @@
+{
+  "scriptFile" : "../welcome-email-function-1.0.0.jar",
+  "entryPoint" : "com.doclink.functions.WelcomeEmailFunction.sendWelcomeEmail",
+  "bindings" : [ {
+    "type" : "httpTrigger",
+    "direction" : "in",
+    "name" : "req",
+    "methods" : [ "POST" ],
+    "authLevel" : "FUNCTION"
+  }, {
+    "type" : "http",
+    "direction" : "out",
+    "name" : "$return"
+  } ]
+}
