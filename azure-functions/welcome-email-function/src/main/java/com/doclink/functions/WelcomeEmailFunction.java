@@ -67,6 +67,7 @@ public class WelcomeEmailFunction {
                     .build();
         }
     }
+    
 
     private boolean sendWelcomeEmailInternal(UserCreatedEvent userEvent, Logger logger) {
         try {
