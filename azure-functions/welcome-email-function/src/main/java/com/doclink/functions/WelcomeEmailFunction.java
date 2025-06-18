@@ -19,12 +19,23 @@ public class WelcomeEmailFunction {
     public HttpResponseMessage sendWelcomeEmail(
             @HttpTrigger(
                     name = "req",
-                    methods = {HttpMethod.POST},
+                    methods = {HttpMethod.POST, HttpMethod.OPTIONS},
                     authLevel = AuthorizationLevel.FUNCTION
             ) HttpRequestMessage<Optional<String>> request,
             final ExecutionContext context) {
 
         Logger logger = context.getLogger();
+
+        // Handle CORS preflight requests
+        if (request.getHttpMethod() == HttpMethod.OPTIONS) {
+            return request.createResponseBuilder(HttpStatus.OK)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, x-functions-key")
+                    .header("Access-Control-Max-Age", "3600")
+                    .build();
+        }
+
         logger.info("Welcome email function triggered via HTTP");
 
         try {
@@ -33,6 +44,7 @@ public class WelcomeEmailFunction {
 
             if (requestBody.isEmpty()) {
                 return request.createResponseBuilder(HttpStatus.BAD_REQUEST)
+                        .header("Access-Control-Allow-Origin", "*")
                         .body("Request body is required")
                         .build();
             }
@@ -50,11 +62,13 @@ public class WelcomeEmailFunction {
             if (emailSent) {
                 logger.info("Welcome email sent successfully to: " + userEvent.getEmail());
                 return request.createResponseBuilder(HttpStatus.OK)
+                        .header("Access-Control-Allow-Origin", "*")
                         .body("Welcome email sent successfully")
                         .build();
             } else {
                 logger.severe("Failed to send welcome email to: " + userEvent.getEmail());
                 return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .header("Access-Control-Allow-Origin", "*")
                         .body("Failed to send welcome email")
                         .build();
             }
@@ -63,11 +77,11 @@ public class WelcomeEmailFunction {
             logger.severe("Error processing welcome email: " + e.getMessage());
             e.printStackTrace();
             return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("Access-Control-Allow-Origin", "*")
                     .body("Error processing request: " + e.getMessage())
                     .build();
         }
     }
-    
 
     private boolean sendWelcomeEmailInternal(UserCreatedEvent userEvent, Logger logger) {
         try {
@@ -115,62 +129,75 @@ public class WelcomeEmailFunction {
     private String buildWelcomeEmailContent(UserCreatedEvent userEvent) {
         String roleDisplay = "DOC".equals(userEvent.getRole()) ? "Doctor" : "Patient";
         String roleSpecificContent = "DOC".equals(userEvent.getRole()) ?
-                "<li><strong>Set up your practice</strong> - Configure your availability and appointment settings</li>" :
-                "<li><strong>Find doctors</strong> - Browse and connect with healthcare providers</li>";
+                "<p>As a doctor on DocLink, you can:</p>" +
+                        "<ul>" +
+                        "<li>Create and manage your medical posts</li>" +
+                        "<li>Connect with patients seeking your expertise</li>" +
+                        "<li>Schedule and manage appointments</li>" +
+                        "<li>Build your professional presence</li>" +
+                        "</ul>" :
+                "<p>As a patient on DocLink, you can:</p>" +
+                        "<ul>" +
+                        "<li>Browse medical posts from qualified doctors</li>" +
+                        "<li>Book appointments with healthcare providers</li>" +
+                        "<li>Access your appointment history</li>" +
+                        "<li>Connect with the right healthcare professionals</li>" +
+                        "</ul>";
 
         return String.format("""
             <!DOCTYPE html>
             <html>
             <head>
-                <meta charset="utf-8">
-                <title>Welcome to DocLink</title>
                 <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
-                    .header { background-color: #2c5aa0; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-                    .content { padding: 30px; background-color: #f9f9f9; }
-                    .footer { padding: 20px; text-align: center; color: #666; font-size: 14px; background-color: #e9e9e9; border-radius: 0 0 8px 8px; }
-                    .button { background-color: #2c5aa0; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
-                    h1 { margin: 0; font-size: 28px; }
-                    h2 { color: #2c5aa0; margin-bottom: 10px; }
-                    h3 { color: #2c5aa0; margin-top: 25px; margin-bottom: 15px; }
-                    ul { padding-left: 20px; }
-                    li { margin-bottom: 8px; }
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background-color: #007bff; color: white; padding: 20px; text-align: center; }
+                    .content { padding: 20px; background-color: #f9f9f9; }
+                    .footer { text-align: center; padding: 10px; color: #666; font-size: 12px; }
+                    ul { margin: 10px 0; padding-left: 20px; }
+                    .button { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
                 </style>
             </head>
             <body>
-                <div class="header">
-                    <h1>Welcome to DocLink!</h1>
-                </div>
-                <div class="content">
-                    <h2>Hello %s %s,</h2>
-                    <p>Welcome to DocLink! We're excited to have you join our healthcare platform as a <strong>%s</strong>.</p>
-                    
-                    <p>DocLink is designed to streamline healthcare communication and make managing your medical needs easier than ever. Our platform connects patients and healthcare providers in a secure, efficient environment.</p>
-                    
-                    <h3>What's next?</h3>
-                    <ul>
-                        <li><strong>Complete your profile</strong> - Add your medical information and preferences</li>
+                <div class="container">
+                    <div class="header">
+                        <h1>Welcome to DocLink!</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Hello %s %s,</h2>
+                        
+                        <p>Thank you for joining DocLink as a <strong>%s</strong>! We're excited to have you as part of our healthcare community.</p>
+                        
                         %s
-                        <li><strong>Explore the platform</strong> - Familiarize yourself with all available features</li>
-                        <li><strong>Get support</strong> - Our team is here to help you get started</li>
-                    </ul>
-                    
-                    <p>Your account details:</p>
-                    <ul>
-                        <li>Email: %s</li>
-                        <li>Account Type: %s</li>
-                        <li>Registration Date: Today</li>
-                    </ul>
-                    
-                    <p>If you have any questions or need assistance, our support team is here to help. Simply reply to this email or contact us through the platform.</p>
-                    
-                    <p>Thank you for choosing DocLink! We look forward to supporting your healthcare journey.</p>
-                    
-                    <p><strong>Best regards,</strong><br>The DocLink Team</p>
-                </div>
-                <div class="footer">
-                    <p>This email was sent from DocLink. If you have any questions, please contact our support team.</p>
-                    <p>&copy; 2024 DocLink. All rights reserved.</p>
+                        
+                        <p><strong>Your account details:</strong></p>
+                        <ul>
+                            <li>Email: %s</li>
+                            <li>Role: %s</li>
+                        </ul>
+                        
+                        <p>You can now log in to your account and start exploring all the features DocLink has to offer.</p>
+                        
+                        <h3>Getting Started</h3>
+                        <p>Here are some tips to help you get the most out of DocLink:</p>
+                        <ol>
+                            <li>Complete your profile to help others learn more about you</li>
+                            <li>Explore the platform and familiarize yourself with the features</li>
+                            <li>Reach out if you have any questions or need assistance</li>
+                        </ol>
+                        
+                        <h3>Need Help?</h3>
+                        <p>Our support team is here to assist you. If you have any questions or encounter any issues, please don't hesitate to contact us.</p>
+                        <p>Simply reply to this email or contact us through the platform.</p>
+                        
+                        <p>Thank you for choosing DocLink! We look forward to supporting your healthcare journey.</p>
+                        
+                        <p><strong>Best regards,</strong><br>The DocLink Team</p>
+                    </div>
+                    <div class="footer">
+                        <p>This email was sent from DocLink. If you have any questions, please contact our support team.</p>
+                        <p>&copy; 2024 DocLink. All rights reserved.</p>
+                    </div>
                 </div>
             </body>
             </html>
