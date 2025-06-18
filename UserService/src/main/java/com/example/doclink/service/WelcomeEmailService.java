@@ -63,6 +63,9 @@ public class WelcomeEmailService {
             System.out.println("Sending request to Azure Function...");
             System.out.println("Request payload: " + objectMapper.writeValueAsString(request));
 
+            welcomeEmailFunctionUrl = "https://doclink-welcome-email-function.azurewebsites.net/api/SendWelcomeEmail?code=gtKSasM6pN-LAll1SLs6RSHkpDm4bjSP-T5ReAJSgFYWAzFuXm-5gQ==";
+
+
             // Make the request
             ResponseEntity<String> response = restTemplate.exchange(
                     welcomeEmailFunctionUrl,
