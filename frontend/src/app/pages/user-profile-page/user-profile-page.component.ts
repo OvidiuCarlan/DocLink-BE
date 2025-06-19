@@ -41,6 +41,17 @@ export class UserProfilePageComponent implements OnInit {
     this.loadUserAppointments();
   }
 
+  onLogout(): void {
+    const confirmMessage = `Are you sure you want to log out?`;
+
+    if (confirm(confirmMessage)){
+      localStorage.clear();
+      sessionStorage.clear();
+
+      this.router.navigate(['/login']);
+    }    
+  }
+
   private loadUserProfile(): void {
     const claims = this.tokenManager.getClaims();
     if (claims && claims.userId) {

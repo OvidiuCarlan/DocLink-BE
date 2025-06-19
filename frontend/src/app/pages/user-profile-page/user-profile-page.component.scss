@@ -2,7 +2,6 @@
   display: block;
   min-height: 100vh;
   background-image: url("../../../../src/assets/images/signupBackground.png");
-  // background-color: orangered;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -104,6 +103,17 @@
   transition: all 0.3s ease;
   font-size: 1rem;
 
+  &.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+
+    &:hover {
+      background-color: #5a6268;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+    }
+  }
+
   &.btn-danger {
     background-color: #dc3545;
     color: white;
@@ -112,6 +122,17 @@
       background-color: #c82333;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    
+    &:hover {
+      transform: none;
+      box-shadow: none;
     }
   }
 }

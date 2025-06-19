@@ -26,6 +26,11 @@
         
         <div class="profile-actions">
           <button 
+            class="btn btn-secondary" 
+            (click)="onLogout()">
+            Log Out
+          </button>
+          <button 
             class="btn btn-danger" 
             (click)="onDeleteAccount()"
             [disabled]="isDeleting">
