@@ -13,7 +13,7 @@
     <div class="right-section">
       <button (click)="navigateToLandingPage()">Home</button>
       <button (click)="navigateToProfilePage()">Profile</button>
-      <button (click)="navigateToCreatePost()">Posts</button>
+      <button *ngIf="isDoctor" (click)="navigateToCreatePost()">Posts</button>
       <app-notification-dropdown></app-notification-dropdown>
     </div>
   </nav>

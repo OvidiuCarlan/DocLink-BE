@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { NotificationDropdownComponent } from '../notification-dropdown/notification-dropdown/notification-dropdown.component'; 
-
+import { TokenManagerService } from '../../services/token-manager.service';
 
 @Component({
   selector: 'app-navbar',
@@ -14,9 +14,23 @@ import { NotificationDropdownComponent } from '../notification-dropdown/notifica
 
 export class NavbarComponent {
   logoPath = 'assets/images/logo.png';
+  isDoctor = false;
   
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private tokenManager: TokenManagerService
+  ) {}
 
+  ngOnInit(): void {
+    this.checkUserRole();
+  }
+
+  private checkUserRole(): void {
+    const claims = this.tokenManager.getClaims();
+    if (claims && claims.roles) {
+      this.isDoctor = claims.roles.includes('DOC');
+    }
+  }
   
   navigateToCreatePost() {
     this.router.navigate(['/create-post']);
