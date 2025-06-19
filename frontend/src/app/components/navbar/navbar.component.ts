@@ -1,12 +1,13 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { NotificationDropdownComponent } from '../notification-dropdown/notification-dropdown/notification-dropdown.component'; 
 import { TokenManagerService } from '../../services/token-manager.service';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [NotificationDropdownComponent],
+  imports: [NotificationDropdownComponent, CommonModule],
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss'
 })
