@@ -97,8 +97,8 @@ export class UserProfilePageComponent implements OnInit {
       this.authService.deleteUserAccount(this.user.id).subscribe({
         next: () => {
           alert('Your account has been successfully deleted. You will now be logged out.');
-          // Clear local storage and redirect to login
           localStorage.clear();
+          sessionStorage.clear();
           this.router.navigate(['/login']);
         },
         error: (err) => {
