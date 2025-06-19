@@ -20,7 +20,7 @@ public class WelcomeEmailFunction {
             @HttpTrigger(
                     name = "req",
                     methods = {HttpMethod.POST, HttpMethod.OPTIONS},
-                    authLevel = AuthorizationLevel.FUNCTION
+                    authLevel = AuthorizationLevel.ANONYMOUS
             ) HttpRequestMessage<Optional<String>> request,
             final ExecutionContext context) {
 
